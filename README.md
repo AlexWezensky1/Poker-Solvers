@@ -2,7 +2,7 @@
 Collaborative project to build various poker solvers, with the main goal to improve edge as players.  
 
 ## Programs I'm Using
-- Visual Studio Code
+- Visual Studio Code  
   Extensions
   - .NET Extension Pack
   - .NET Install Tool
