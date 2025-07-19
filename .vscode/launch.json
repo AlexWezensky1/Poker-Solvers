@@ -4,18 +4,29 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        {
-            "name": "C#: <project-name> Debug",
-            "type": "dotnet",
-            "request": "launch",
-            "projectPath": "${workspaceFolder}/<relative-path-to-project-folder><project-name>.csproj"
-        },
-        
-        {
-            "name": ".NET Core Attach",
-            "type": "coreclr",
-            "request": "attach"
-        }
 
+        // {
+        //     "name": "C#: <project-name> Debug",
+        //     "type": "dotnet",
+        //     "request": "launch",
+        //     "projectPath": "${workspaceFolder}/<relative-path-to-project-folder><project-name>.csproj"
+        // },
+        
+        // {
+        //     "name": ".NET Core Attach",
+        //     "type": "coreclr",
+        //     "request": "attach"
+        // },
+
+        {
+            "name": "Debug PLO8",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/PLO8/bin/Debug/net9.0/PLO8.dll",
+            "console": "internalConsole", //integratedTerminal, or internalConsole, or externalTerminal
+            "justMyCode": false,
+            "logging": {"moduleLoad": false}
+        }
     ]
 }
