@@ -18,4 +18,3 @@ Some way to reference on phones
 ### Draw poker  
 - 5 card draw  
 
-VS test
