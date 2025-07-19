@@ -3,7 +3,7 @@ Collaborative project to build various poker solvers, with the main goal to impr
 
 ## Programs I'm Using
 - Visual Studio Code
-- - Extensions
+  - Extensions
   - .NET Extension Pack
   - .NET Install Tool
   - C#
