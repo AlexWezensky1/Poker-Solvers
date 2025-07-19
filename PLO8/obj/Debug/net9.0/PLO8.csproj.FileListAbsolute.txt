@@ -1,0 +1,15 @@
+C:\Users\amath\Documents\GitHub\Poker-Solvers\PLO8\bin\Debug\net9.0\PLO8.deps.json
+C:\Users\amath\Documents\GitHub\Poker-Solvers\PLO8\bin\Debug\net9.0\PLO8.dll
+C:\Users\amath\Documents\GitHub\Poker-Solvers\PLO8\bin\Debug\net9.0\PLO8.pdb
+C:\Users\amath\Documents\GitHub\Poker-Solvers\PLO8\obj\Debug\net9.0\PLO8.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\amath\Documents\GitHub\Poker-Solvers\PLO8\obj\Debug\net9.0\PLO8.AssemblyInfoInputs.cache
+C:\Users\amath\Documents\GitHub\Poker-Solvers\PLO8\obj\Debug\net9.0\PLO8.AssemblyInfo.cs
+C:\Users\amath\Documents\GitHub\Poker-Solvers\PLO8\obj\Debug\net9.0\PLO8.csproj.CoreCompileInputs.cache
+C:\Users\amath\Documents\GitHub\Poker-Solvers\PLO8\obj\Debug\net9.0\PLO8.sourcelink.json
+C:\Users\amath\Documents\GitHub\Poker-Solvers\PLO8\obj\Debug\net9.0\PLO8.dll
+C:\Users\amath\Documents\GitHub\Poker-Solvers\PLO8\obj\Debug\net9.0\refint\PLO8.dll
+C:\Users\amath\Documents\GitHub\Poker-Solvers\PLO8\obj\Debug\net9.0\PLO8.pdb
+C:\Users\amath\Documents\GitHub\Poker-Solvers\PLO8\obj\Debug\net9.0\ref\PLO8.dll
+C:\Users\amath\Documents\GitHub\Poker-Solvers\PLO8\bin\Debug\net9.0\PLO8.exe
+C:\Users\amath\Documents\GitHub\Poker-Solvers\PLO8\bin\Debug\net9.0\PLO8.runtimeconfig.json
+C:\Users\amath\Documents\GitHub\Poker-Solvers\PLO8\obj\Debug\net9.0\PLO8.genruntimeconfig.cache
