@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PLO8")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+709043bf21ffe0910105db4ed5aea8c8781d34bb")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e8cc1d319db2a8b29fc0ecbeb483124a24cb42aa")]
 [assembly: System.Reflection.AssemblyProductAttribute("PLO8")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PLO8")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
