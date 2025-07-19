@@ -1,6 +1,16 @@
 # Poker-Solvers
 Collaborative project to build various poker solvers, with the main goal to improve edge as players.  
 
+## Programs I'm Using
+- Visual Studio Code
+- - Extensions
+  - .NET Extension Pack
+  - .NET Install Tool
+  - C#
+  - C# Dev Kit
+  - Github Copilot
+- Github Desktop
+
 ## Potential features
 Pre flop charts  
 Node locking  
