@@ -12,18 +12,13 @@
     <h1>Texas Hold'em Solver</h1>
   </header>
 
-  <section class="panel">
-    <div class="panel-head">
-      <span class="hint">click a dealt card to take it back</span>
-    </div>
+  <section class="panel deck-panel">
     <div id="deck" class="deck"></div>
+    <div class="side">
+      <button id="clear" type="button" class="ghost">Clear</button>
+      <p id="status" class="status"></p>
+    </div>
   </section>
-
-  <div class="controls">
-    <button id="clear" type="button" class="ghost">Clear</button>
-  </div>
-
-  <p id="status" class="status"></p>
 
   <section class="panel table-panel">
     <div class="table">

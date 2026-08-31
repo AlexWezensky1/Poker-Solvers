@@ -38,8 +38,6 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
   padding: 13px;
   margin-bottom: 13px;
 }
-.panel-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
-.hint { color: var(--muted); font-size: 10px; }
 
 /* Card inputs. These are hand sized; the board overrides down to 80% below. */
 .card {
@@ -52,6 +50,7 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
   text-align: center;
   padding: 0;
   cursor: pointer;
+  caret-color: transparent;
 }
 .card::placeholder { color: #4b5a68; font-weight: 400; font-size: 15px; }
 .card:focus { outline: none; }
@@ -88,11 +87,15 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
 }
 .board .card { width: 42px; height: 50px; font-size: 16px; border-radius: 6px; }
 .board .card::placeholder { font-size: 12px; }
-.slot { display: flex; flex-direction: column; gap: 4px; align-items: center; }
-.slot-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.slot { display: flex; flex-direction: column; align-items: center; }
+/* Turn and river stand off from the flop, so the streets read at a glance. */
+.board .slot:nth-child(4), .board .slot:nth-child(5) { margin-left: 8px; }
 
-.players { position: absolute; inset: 0; }
+/* The seat layer covers the whole table, board included, so it has to let
+   clicks fall through to the community cards underneath. */
+.players { position: absolute; inset: 0; pointer-events: none; }
 .player {
+  pointer-events: auto;
   position: absolute;
   width: 156px;
   transform: translate(-50%, -50%);
@@ -120,12 +123,14 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
 .bar > span { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
 
 /* Deck */
+.deck-panel { display: flex; align-items: flex-start; gap: 16px; }
+.side { flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px; min-width: 108px; }
 .deck {
+  flex: 1 1 auto;
   display: grid;
   grid-template-columns: repeat(13, minmax(0, 1fr));
   gap: 5px;
   max-width: 624px;
-  margin: 0 auto;
 }
 .deck-card {
   display: flex; align-items: center; justify-content: center; gap: 1px;
@@ -146,7 +151,6 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
 .pip { font-size: 10px; }
 
 /* Controls */
-.controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
 button {
   background: var(--accent); color: #06110b; border: 0; border-radius: 6px;
   padding: 9px 18px; font-size: 12px; font-weight: 600; cursor: pointer;
@@ -157,7 +161,7 @@ button:disabled { opacity: 0.55; cursor: default; }
 button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
 button.ghost:hover { background: var(--panel-2); color: var(--text); }
 
-.status { margin-top: 11px; color: var(--muted); font-size: 10px; min-height: 16px; }
+.status { margin: 0; color: var(--muted); font-size: 10px; min-height: 16px; }
 .status.error { color: var(--bad); }
 
 /* Too narrow for the ring: board on top, hands stacked below it. */
@@ -175,8 +179,7 @@ button.ghost:hover { background: var(--panel-2); color: var(--text); }
   .board { gap: 1.11cqw; }
   .board .card { width: 5.83cqw; height: 6.94cqw; font-size: 2.22cqw; border-radius: 0.83cqw; }
   .board .card::placeholder { font-size: 1.67cqw; }
-  .slot { gap: 0.56cqw; }
-  .slot-label { font-size: max(7px, 1.25cqw); }
+  .board .slot:nth-child(4), .board .slot:nth-child(5) { margin-left: 1.11cqw; }
   .equity-pct { font-size: max(11px, 2.5cqw); }
   .breakdown { font-size: max(8px, 1.53cqw); }
   .bar { height: 0.69cqw; margin: 0.69cqw 0 0.56cqw; }
@@ -185,7 +188,7 @@ button.ghost:hover { background: var(--panel-2); color: var(--text); }
 @media (max-width: 940px) {
   .table { width: 100%; aspect-ratio: auto; display: flex; flex-direction: column; align-items: center; gap: 16px; }
   .felt { display: none; }
-  .board { position: static; transform: none; flex-wrap: wrap; justify-content: center; }
+  .board { position: static; transform: none; flex-wrap: wrap; justify-content: center; padding-top: 8px; }
   .players {
     position: static;
     display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
@@ -195,6 +198,8 @@ button.ghost:hover { background: var(--panel-2); color: var(--text); }
 }
 
 @media (max-width: 620px) {
+  .deck-panel { flex-direction: column; }
+  .side { flex-direction: row; align-items: center; width: 100%; }
   .deck { gap: 4px; }
   .deck-card { font-size: 10px; padding: 6px 0; }
   .pip { font-size: 9px; }

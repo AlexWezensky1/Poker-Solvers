@@ -3,7 +3,7 @@
 const RANKS = "23456789TJQKA";
 const SUITS = "shdc";
 const MAX_PLAYERS = 8;
-const BOARD_LABELS = ["Flop", "Flop", "Flop", "Turn", "River"];
+const BOARD_SIZE = 5;
 
 // The deck grid: one row per suit, ranks running high to low.
 const DECK_RANKS = "AKQJT98765432";
@@ -103,17 +103,14 @@ function makeCardInput() {
 }
 
 function buildBoard() {
-  BOARD_LABELS.forEach((label) => {
+  for (let i = 0; i < BOARD_SIZE; i++) {
     const slot = document.createElement("div");
     slot.className = "slot";
     const input = makeCardInput();
-    const caption = document.createElement("span");
-    caption.className = "slot-label";
-    caption.textContent = label;
-    slot.append(input, caption);
+    slot.appendChild(input);
     boardEl.appendChild(slot);
     boardInputs.push(input);
-  });
+  }
 }
 
 // Where a seat sits on the ring, counted clockwise from the top.
@@ -257,11 +254,15 @@ function render(hands, results) {
     fill.style.width = Math.max(result.equity, 0) + "%";
     bar.appendChild(fill);
 
-    const breakdown = document.createElement("div");
-    breakdown.className = "breakdown";
-    breakdown.textContent = "win " + result.win.toFixed(2) + "%  ·  tie " + result.tie.toFixed(2) + "%";
+    const win = document.createElement("div");
+    win.className = "breakdown";
+    win.textContent = "Win " + result.win.toFixed(2) + "%";
 
-    player.result.append(pct, bar, breakdown);
+    const tie = document.createElement("div");
+    tie.className = "breakdown";
+    tie.textContent = "Tie " + result.tie.toFixed(2) + "%";
+
+    player.result.append(pct, bar, win, tie);
 
     if (result.best_hand) {
       const made = document.createElement("div");

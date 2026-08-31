@@ -29,7 +29,7 @@ class EquityRequest(BaseModel):
     board: str = Field("", description="0-5 community cards, e.g. 'Jh Ts 2c'")
     trials: int = Field(DEFAULT_TRIALS, ge=1, le=MAX_TRIALS)
     mode: Literal["auto", "exact"] = Field(
-        "auto", description="'exact' enumerates every runout, even preflop"
+        "exact", description="'auto' samples instead of enumerating when a runout count is large"
     )
 
 
