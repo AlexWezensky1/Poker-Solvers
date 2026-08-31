@@ -1,4 +1,4 @@
-"""An HMRS equity solver."""
+"""An HMRDS equity solver."""
 
 from .cards import card_str, cards_str, mask_str, parse_card, parse_cards, rank_mask
 from .equity import DEFAULT_TRIALS, MAX_PLAYERS, EquityReport, HandEquity, equity

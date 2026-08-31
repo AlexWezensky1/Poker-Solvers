@@ -1,4 +1,4 @@
-"""FastAPI front end for the HMRS equity solver.
+"""FastAPI front end for the HMRDS equity solver.
 
 Serves the single page UI from ``web/static`` and one JSON endpoint the page
 calls when you press Calculate.
@@ -13,15 +13,15 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from hmrs.cards import BOARD_SIZE, HAND_SIZE, cards_str, parse_cards
-from hmrs.equity import DEFAULT_TRIALS, MAX_PLAYERS, equity
+from hmrds.cards import BOARD_SIZE, HAND_SIZE, cards_str, parse_cards
+from hmrds.equity import DEFAULT_TRIALS, MAX_PLAYERS, equity
 
 #: Keeps a single request from tying the server up for more than a second or two.
 MAX_TRIALS = 250_000
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
-app = FastAPI(title="HMRS Solver", docs_url="/hmrs/api/docs", redoc_url=None)
+app = FastAPI(title="HMRDS Solver", docs_url="/hmrds/api/docs", redoc_url=None)
 
 
 class EquityRequest(BaseModel):
@@ -59,7 +59,7 @@ class EquityResponse(BaseModel):
     hands: list[HandResponse]
 
 
-@app.get("/hmrs/api/health")
+@app.get("/hmrds/api/health")
 def health():
     return {
         "status": "ok",
@@ -70,7 +70,7 @@ def health():
     }
 
 
-@app.post("/hmrs/api/equity", response_model=EquityResponse)
+@app.post("/hmrds/api/equity", response_model=EquityResponse)
 def calculate(request: EquityRequest):
     try:
         hands = [parse_cards(text) for text in request.hands]
@@ -110,8 +110,8 @@ def calculate(request: EquityRequest):
 
 @app.get("/", include_in_schema=False)
 def index():
-    """The solver lives under /hmrs; keep the bare domain pointing at it."""
-    return RedirectResponse("/hmrs/")
+    """The solver lives under /hmrds; keep the bare domain pointing at it."""
+    return RedirectResponse("/hmrds/")
 
 
-app.mount("/hmrs", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+app.mount("/hmrds", StaticFiles(directory=STATIC_DIR, html=True), name="static")

@@ -342,7 +342,7 @@ async function run(input) {
   const ticket = ++latest;
   setStatus("Calculating…");
   try {
-    const response = await fetch("/hmrs/api/equity", {
+    const response = await fetch("/hmrds/api/equity", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       // Trials and mode are left off; the server picks its own defaults.

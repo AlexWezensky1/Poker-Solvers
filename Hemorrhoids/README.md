@@ -1,6 +1,6 @@
-# HMRS Solver
+# HMRDS Solver
 
-Equity calculator for HMRS. Give it up to eight five-card hands and up to ten
+Equity calculator for HMRDS. Give it up to eight five-card hands and up to ten
 community cards; it returns each hand's share of the pot, how often it scoops,
 how often it empties out and how often it keeps all five. Hands can be named
 only in part — a player whose discards you can see but whose remaining cards you
@@ -10,7 +10,7 @@ line tool and as a small web app.
 ## Quick start
 
 ```bash
-python -m hmrs AsKsQsJsTs 2h3h4h5h6h --board "2c3c4c5c 7h8h9h"
+python -m hmrds AsKsQsJsTs 2h3h4h5h6h --board "2c3c4c5c 7h8h9h"
 ```
 
 ```
@@ -97,7 +97,7 @@ matched it.
 ## Command line
 
 ```
-python -m hmrs [HAND ...] [-b BOARD] [-t TRIALS] [-m MODE] [--seed N] [--json]
+python -m hmrds [HAND ...] [-b BOARD] [-t TRIALS] [-m MODE] [--seed N] [--json]
 ```
 
 | Option | Meaning |
@@ -112,11 +112,11 @@ python -m hmrs [HAND ...] [-b BOARD] [-t TRIALS] [-m MODE] [--seed N] [--json]
 Examples:
 
 ```bash
-python -m hmrs KsKhQsQhJs AcKdQdJdTd                      # opening deal, sampled
-python -m hmrs KsKhQsQhJs AcKdQdJdTd --mode exact         # walked in full
-python -m hmrs AsKsQsJsTs 2h3h4h5h6h -b "2c3c4c5c" --json
-python -m hmrs AsKsQsJsTs /2c3c -b "2s3s4s7s"             # villain read only by discards
-python -m hmrs                                            # prompts for hands
+python -m hmrds KsKhQsQhJs AcKdQdJdTd                      # opening deal, sampled
+python -m hmrds KsKhQsQhJs AcKdQdJdTd --mode exact         # walked in full
+python -m hmrds AsKsQsJsTs 2h3h4h5h6h -b "2c3c4c5c" --json
+python -m hmrds AsKsQsJsTs /2c3c -b "2s3s4s7s"             # villain read only by discards
+python -m hmrds                                            # prompts for hands
 ```
 
 ## Web app
@@ -131,7 +131,7 @@ once it holds five cards or once anything of its is face up. Leave a seat's
 remaining slots empty and those cards are dealt at random, so a player you can
 only read by their discards still counts.
 
-`POST /hmrs/api/equity`
+`POST /hmrds/api/equity`
 
 ```json
 {
@@ -160,12 +160,12 @@ only read by their discards still counts.
 `hands` is what each seat still holds and `discards` what it has turned face up,
 in the same seat order. Both may be left short; the remainder is unknown.
 
-Bad input comes back as a `400` with a plain english `detail`. `GET /hmrs/api/health`
-is a liveness probe. Interactive API docs are at `/hmrs/api/docs`.
+Bad input comes back as a `400` with a plain english `detail`. `GET /hmrds/api/health`
+is a liveness probe. Interactive API docs are at `/hmrds/api/docs`.
 
 ## How it works
 
-**Suits do not exist.** Nothing in HMRS reads a suit — community cards match by
+**Suits do not exist.** Nothing in HMRDS reads a suit — community cards match by
 rank and hands score by rank — so the whole engine runs on 13 bit rank masks.
 Each hand precomputes a table of its own surviving submasks, at most 32 rows,
 holding cards left and the low and high totals. Survival for one player against
@@ -199,7 +199,7 @@ sampled, never walked, so `auto` picks Monte Carlo for it and `--mode exact`
 refuses it outright; three unknown cards costs about half a second on top of the
 usual run.
 
-Both engines settle through the same `hmrs.scoring.resolve`, so the rules live in
+Both engines settle through the same `hmrds.scoring.resolve`, so the rules live in
 exactly one place.
 
 ## Tests

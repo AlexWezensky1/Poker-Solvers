@@ -1,4 +1,4 @@
-"""Equity calculation for HMRS.
+"""Equity calculation for HMRDS.
 
 Two engines settle the same rules.
 
@@ -322,11 +322,11 @@ def _exact_cost(live, unknown, needs):
 
 def equity(hands, board=(), discards=None, trials=DEFAULT_TRIALS, seed=None,
            mode="auto", exact_budget=DEFAULT_EXACT_BUDGET):
-    """Compute equity for two or more HMRS hands.
+    """Compute equity for two or more HMRDS hands.
 
     ``hands`` holds what each player is still known to be holding and
     ``discards`` what they have already turned face up, both as sequences of
-    card ints from :mod:`hmrs.cards`.  Everyone is dealt five, so whatever the
+    card ints from :mod:`hmrds.cards`.  Everyone is dealt five, so whatever the
     two do not account for is unknown and gets dealt at random each trial --
     out of the cards the board has not matched, since a matched card would be
     lying face up rather than hidden.  ``board`` holds 0-10 community cards in

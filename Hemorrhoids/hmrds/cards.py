@@ -1,7 +1,7 @@
 """Card representation and parsing.
 
 A card is a plain int in 0..51 where ``rank = card >> 2`` (0 = deuce .. 12 = ace)
-and ``suit = card & 3``.  Suits are dealt and displayed but nothing in HMRS ever
+and ``suit = card & 3``.  Suits are dealt and displayed but nothing in HMRDS ever
 reads one: community cards match by rank and hands score by rank.  The hot loops
 therefore work on 13 bit rank masks, one bit per rank, so "which of my cards
 survive this board" is a single AND.

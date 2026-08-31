@@ -1,4 +1,4 @@
-"""Command line front end for the HMRS equity solver."""
+"""Command line front end for the HMRDS equity solver."""
 
 import argparse
 import json
@@ -105,9 +105,9 @@ def _as_dict(report, elapsed):
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        prog="hmrs",
-        description="HMRS equity calculator.",
-        epilog="example: hmrs AsKsQsJsTs 2h3h4h5h6h --board '2c3c4c5c 7h8h9h'",
+        prog="hmrds",
+        description="HMRDS equity calculator.",
+        epilog="example: hmrds AsKsQsJsTs 2h3h4h5h6h --board '2c3c4c5c 7h8h9h'",
     )
     parser.add_argument(
         "hands", nargs="*", metavar="HAND",

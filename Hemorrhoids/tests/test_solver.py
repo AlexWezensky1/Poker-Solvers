@@ -1,4 +1,4 @@
-"""Tests for the HMRS scoring rules and equity engines.
+"""Tests for the HMRDS scoring rules and equity engines.
 
 Run with pytest, or directly: ``python tests/test_solver.py``.
 """
@@ -10,11 +10,11 @@ from itertools import combinations
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from hmrs.cards import (  # noqa: E402
+from hmrds.cards import (  # noqa: E402
     FULL_DECK, HAND_SIZE, RANK_BIT, RANK_CHARS, STREETS, parse_cards, rank_mask,
 )
-from hmrs.equity import equity  # noqa: E402
-from hmrs.scoring import (  # noqa: E402
+from hmrds.equity import equity  # noqa: E402
+from hmrds.scoring import (  # noqa: E402
     HIGH_VALUE, LOW_VALUE, build_profile, build_profiles, describe, resolve, showdown,
 )
 

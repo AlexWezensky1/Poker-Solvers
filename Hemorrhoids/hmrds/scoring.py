@@ -1,4 +1,4 @@
-"""Hand scoring and pot resolution for HMRS.
+"""Hand scoring and pot resolution for HMRDS.
 
 Only cards still in your hand are scored.  Deuce through ten are worth their
 face value, jacks queens and kings are worth ten, and an ace is worth one for
