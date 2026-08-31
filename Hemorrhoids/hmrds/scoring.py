@@ -103,7 +103,9 @@ def showdown(hand_masks, tables, board):
     """Settle the pot once the last community card is out.
 
     ``board`` is the rank mask of all ten community cards.  Returns
-    ``(pot, out_seats, kept_seats)``.
+    ``(pot, out_seats, kept_seats, high_seats, low_seats)``.  The last two are
+    empty unless the hand actually reached a high/low showdown, since a pot won
+    outright is never split into halves.
     """
     n = len(hand_masks)
     survivors = [mask & ~board for mask in hand_masks]
@@ -114,7 +116,7 @@ def showdown(hand_masks, tables, board):
     # alongside anyone who kept their whole hand -- and takes the lot when
     # nobody did.
     if out or kept:
-        return _split(out + kept, n), out, kept
+        return _split(out + kept, n), out, kept, [], []
 
     scored = [tables[seat][survivors[seat]] for seat in range(n)]
     best_high = max(row[2] for row in scored)
@@ -127,19 +129,19 @@ def showdown(hand_masks, tables, board):
         pot[seat] += 0.5 / len(highs)
     for seat in lows:
         pot[seat] += 0.5 / len(lows)
-    return pot, out, kept
+    return pot, out, kept, highs, lows
 
 
 def resolve(hand_masks, tables, boards):
     """Settle one whole runout.
 
     ``boards`` holds the cumulative community rank mask after each of the four
-    streets.  Returns ``(pot, out_seats, kept_seats)``.
+    streets.  Returns ``(pot, out_seats, kept_seats, high_seats, low_seats)``.
     """
     for street in range(LAST_STREET):
         gone = empty_seats(hand_masks, boards[street])
         if gone:
-            return _split(gone, len(hand_masks)), gone, []
+            return _split(gone, len(hand_masks)), gone, [], [], []
     return showdown(hand_masks, tables, boards[LAST_STREET])
 
 

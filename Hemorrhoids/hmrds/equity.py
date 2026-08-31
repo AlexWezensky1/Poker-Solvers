@@ -29,7 +29,7 @@ from .scoring import (
 
 #: Ten community cards plus five apiece caps the table at eight.
 MAX_PLAYERS = (52 - BOARD_SIZE) // HAND_SIZE
-DEFAULT_TRIALS = 100_000
+DEFAULT_TRIALS = 250_000
 
 #: Walk the exact DP while its estimated size stays under this many steps.
 DEFAULT_EXACT_BUDGET = 5_000_000
@@ -43,6 +43,8 @@ class HandEquity:
     scoops: float
     outs: float
     keeps: float
+    highs: float
+    lows: float
     trials: float
     held: tuple = ()
     discarded: tuple = ()
@@ -80,6 +82,21 @@ class HandEquity:
     def keep_pct(self):
         """How often this hand still holds all five at the end."""
         return self._pct(self.keeps)
+
+    @property
+    def high_pct(self):
+        """Share of the high half this hand takes, over all runouts.
+
+        Runouts won outright never split into halves, so they count nothing
+        here -- these two only add up across seats as often as the hand
+        actually reaches a high/low showdown.
+        """
+        return self._pct(self.highs)
+
+    @property
+    def low_pct(self):
+        """Share of the low half this hand takes, over all runouts."""
+        return self._pct(self.lows)
 
 
 @dataclass
@@ -192,6 +209,8 @@ def _exact(masks, tables, avail, bits, filler, needs, known_masks):
         scoops = [0.0] * n
         outs = [0.0] * n
         keeps = [0.0] * n
+        highs = [0.0] * n
+        lows = [0.0] * n
 
         for taken, ways, added in _street_draws(state, bits, need, spare):
             chance = ways / denom
@@ -210,16 +229,17 @@ def _exact(masks, tables, avail, bits, filler, needs, known_masks):
                             scoops[seat] += chance
                     continue
                 spent = sum(state) - sum(taken)
-                sub_pot, sub_scoops, sub_outs, sub_keeps = fill(
-                    street + 1, taken, turned | known_masks[street + 1],
-                    spare - (need - spent))
+                sub = fill(street + 1, taken, turned | known_masks[street + 1],
+                           spare - (need - spent))
                 for seat in range(n):
-                    pot[seat] += chance * sub_pot[seat]
-                    scoops[seat] += chance * sub_scoops[seat]
-                    outs[seat] += chance * sub_outs[seat]
-                    keeps[seat] += chance * sub_keeps[seat]
+                    pot[seat] += chance * sub[0][seat]
+                    scoops[seat] += chance * sub[1][seat]
+                    outs[seat] += chance * sub[2][seat]
+                    keeps[seat] += chance * sub[3][seat]
+                    highs[seat] += chance * sub[4][seat]
+                    lows[seat] += chance * sub[5][seat]
             else:
-                final, gone, kept = showdown(masks, tables, turned)
+                final, gone, kept, high, low = showdown(masks, tables, turned)
                 for seat in range(n):
                     pot[seat] += chance * final[seat]
                     if final[seat] > 0.999999999:
@@ -228,8 +248,13 @@ def _exact(masks, tables, avail, bits, filler, needs, known_masks):
                     outs[seat] += chance
                 for seat in kept:
                     keeps[seat] += chance
+                if high:
+                    for seat in high:
+                        highs[seat] += chance / len(high)
+                    for seat in low:
+                        lows[seat] += chance / len(low)
 
-        result = (pot, scoops, outs, keeps)
+        result = (pot, scoops, outs, keeps, highs, lows)
         memo[key] = result
         return result
 
@@ -273,6 +298,8 @@ def _monte_carlo(known, unknown, deck, hole_pool, needs, known_masks, trials, se
     scoops = [0.0] * n
     outs = [0.0] * n
     keeps = [0.0] * n
+    highs = [0.0] * n
+    lows = [0.0] * n
 
     for _ in range(trials):
         pool = deck
@@ -300,7 +327,7 @@ def _monte_carlo(known, unknown, deck, hole_pool, needs, known_masks, trials, se
             at += needs[street]
             boards.append(turned)
 
-        share, gone, kept = resolve(masks, tables, boards)
+        share, gone, kept, high, low = resolve(masks, tables, boards)
         for seat in range(n):
             pot[seat] += share[seat]
             if share[seat] > 0.999999999:
@@ -309,8 +336,13 @@ def _monte_carlo(known, unknown, deck, hole_pool, needs, known_masks, trials, se
             outs[seat] += 1
         for seat in kept:
             keeps[seat] += 1
+        if high:
+            for seat in high:
+                highs[seat] += 1.0 / len(high)
+            for seat in low:
+                lows[seat] += 1.0 / len(low)
 
-    return pot, scoops, outs, keeps
+    return pot, scoops, outs, keeps, highs, lows
 
 
 def _exact_cost(live, unknown, needs):
@@ -385,12 +417,13 @@ def equity(hands, board=(), discards=None, trials=DEFAULT_TRIALS, seed=None,
         avail = tuple(sum(1 for c in deck if c >> 2 == rank) for rank in live)
         bits = tuple(1 << rank for rank in live)
         filler = len(deck) - sum(avail)
-        pot, scoops, outs, keeps = _exact(masks, tables, avail, bits, filler, needs, known_masks)
+        pot, scoops, outs, keeps, highs, lows = _exact(
+            masks, tables, avail, bits, filler, needs, known_masks)
         total = 1.0
     elif mode == "monte-carlo":
         if trials < 1:
             raise ValueError("trials must be at least 1")
-        pot, scoops, outs, keeps = _monte_carlo(
+        pot, scoops, outs, keeps, highs, lows = _monte_carlo(
             known, unknown, deck, hole_pool, needs, known_masks, trials, seed)
         total = float(trials)
     else:
@@ -413,6 +446,8 @@ def equity(hands, board=(), discards=None, trials=DEFAULT_TRIALS, seed=None,
             scoops=scoops[i],
             outs=outs[i],
             keeps=keeps[i],
+            highs=highs[i],
+            lows=lows[i],
             trials=total,
             held=hands[i],
             discarded=discards[i],

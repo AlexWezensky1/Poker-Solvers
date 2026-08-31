@@ -18,7 +18,7 @@ const statusEl = document.getElementById("status");
 const clearBtn = document.getElementById("clear");
 
 // allInputs is built in dealing order, so it doubles as the fill order:
-// hand 1, hand 2, the board, then hands 3-8.
+// the board first, then each seat in turn.
 const allInputs = [];
 const boardInputs = [];
 const players = [];
@@ -33,12 +33,24 @@ function isCard(value) {
   return value.length === 2 && RANKS.includes(value[0]) && SUITS.includes(value[1]);
 }
 
+// A slot shows its card with a suit pip but is read by its plain code, so the
+// letters stay out of sight while everything downstream still speaks "As".
+function cardOf(slot) {
+  return slot.dataset.card || "";
+}
+
+function setCard(slot, card) {
+  slot.dataset.card = card;
+  slot.value = card ? card[0] + SUIT_PIPS[card[1]] : "";
+}
+
 // The ranks the board has turned. A card matching one of these is discarded
 // face up, which is the whole game.
 function turnedRanks() {
   const ranks = new Set();
   for (const input of boardInputs) {
-    if (isCard(input.value)) ranks.add(input.value[0]);
+    const card = cardOf(input);
+    if (card) ranks.add(card[0]);
   }
   return ranks;
 }
@@ -58,7 +70,7 @@ function setActive(input) {
 function nextEmpty(from) {
   for (let step = 1; step <= allInputs.length; step++) {
     const slot = allInputs[(from + step) % allInputs.length];
-    if (slot.value === "") return slot;
+    if (!cardOf(slot)) return slot;
   }
   return null;
 }
@@ -66,9 +78,9 @@ function nextEmpty(from) {
 // A deck click deals into the highlighted slot and moves on to the next empty
 // one; clicking a card that is already out takes it back off the table.
 function pick(card) {
-  const holder = allInputs.find((slot) => slot.value === card);
+  const holder = allInputs.find((slot) => cardOf(slot) === card);
   if (holder) {
-    holder.value = "";
+    setCard(holder, "");
     refresh();
     setActive(holder);
     return;
@@ -76,7 +88,7 @@ function pick(card) {
   if (!active) return;
 
   const from = allInputs.indexOf(active);
-  active.value = card;
+  setCard(active, card);
   refresh();
   setActive(nextEmpty(from));
 }
@@ -92,12 +104,13 @@ function makeCardInput() {
   input.autocomplete = "off";
   input.spellcheck = false;
   input.setAttribute("aria-label", "card");
+  setCard(input, "");
 
   // Clicking a slot that holds a card sends that card back to the deck. Either
   // way the slot is left armed, so the next deck click deals into it.
   input.addEventListener("click", () => {
-    if (input.value !== "") {
-      input.value = "";
+    if (cardOf(input)) {
+      setCard(input, "");
       refresh();
     }
     setActive(input);
@@ -175,23 +188,21 @@ function buildDeck() {
 
 /* ---------- validation ---------- */
 
-// Marks anything unparseable, plus every copy of a card used more than once,
-// greys out the deck cards that are already on the table, and strikes through
-// the hand cards the board has already discarded.
+// Marks every copy of a card used more than once, greys out the deck cards that
+// are already on the table, and strikes through the hand cards the board has
+// already discarded.
 function refresh() {
   const seen = new Map();
   allInputs.forEach((input) => {
-    const value = input.value;
-    if (!isCard(value)) return;
-    seen.set(value, (seen.get(value) || 0) + 1);
+    const card = cardOf(input);
+    if (card) seen.set(card, (seen.get(card) || 0) + 1);
   });
 
   allInputs.forEach((input) => {
-    const value = input.value;
-    const bad = value !== "" && (!isCard(value) || seen.get(value) > 1);
-    input.classList.toggle("invalid", bad);
+    const card = cardOf(input);
+    input.classList.toggle("invalid", Boolean(card) && seen.get(card) > 1);
     input.classList.remove("suit-s", "suit-h", "suit-d", "suit-c");
-    if (isCard(value)) input.classList.add("suit-" + value[1]);
+    if (card) input.classList.add("suit-" + card[1]);
   });
 
   const turned = turnedRanks();
@@ -199,9 +210,10 @@ function refresh() {
     let held = 0;
     let faceUp = 0;
     player.inputs.forEach((input) => {
-      const gone = isCard(input.value) && turned.has(input.value[0]);
+      const card = cardOf(input);
+      const gone = Boolean(card) && turned.has(card[0]);
       input.classList.toggle("discarded", gone);
-      if (isCard(input.value)) gone ? faceUp++ : held++;
+      if (card) gone ? faceUp++ : held++;
     });
     const parts = [];
     if (faceUp) parts.push(faceUp + " face up");
@@ -235,21 +247,13 @@ function setStatus(message, isError) {
 /* ---------- calculating ---------- */
 
 function collect() {
-  const board = [];
-  for (const input of boardInputs) {
-    if (input.value === "") continue;
-    if (!isCard(input.value)) throw new Error("'" + input.value + "' is not a card.");
-    board.push(input.value);
-  }
+  const board = boardInputs.map(cardOf).filter(Boolean);
   const turned = new Set(board.map((card) => card[0]));
 
   const seats = [];
   players.forEach((player, seat) => {
-    const cards = player.inputs.map((input) => input.value).filter((value) => value !== "");
+    const cards = player.inputs.map(cardOf).filter(Boolean);
     if (!cards.length) return;
-    if (cards.some((value) => !isCard(value))) {
-      throw new Error("Hand " + (seat + 1) + " has a card that will not parse.");
-    }
     const discarded = cards.filter((card) => turned.has(card[0]));
     const held = cards.filter((card) => !turned.has(card[0]));
     // A seat counts once it is fully dealt, or once anything of its is face up
@@ -287,6 +291,10 @@ function render(seats, results) {
     fill.style.width = Math.max(result.equity, 0) + "%";
     bar.appendChild(fill);
 
+    const halves = document.createElement("div");
+    halves.className = "breakdown";
+    halves.textContent = "High " + result.high.toFixed(1) + "%  Low " + result.low.toFixed(1) + "%";
+
     const scoop = document.createElement("div");
     scoop.className = "breakdown";
     scoop.textContent = "Scoop " + result.scoop.toFixed(2) + "%";
@@ -295,7 +303,7 @@ function render(seats, results) {
     rest.className = "breakdown";
     rest.textContent = "Out " + result.out.toFixed(1) + "%  Keep " + result.keep.toFixed(1) + "%";
 
-    player.result.append(pct, bar, scoop, rest);
+    player.result.append(pct, bar, halves, scoop, rest);
 
     if (result.detail) {
       const made = document.createElement("div");
@@ -315,7 +323,7 @@ let latest = 0;
 let settling = 0;
 
 // Every card change lands here. Dealing a hand is a burst of clicks and a run
-// can take a second or more, so the table is given a moment to settle first --
+// can take a few seconds, so the table is given a moment to settle first --
 // otherwise every card in the burst queues a run that is stale before it
 // finishes, and they all fight each other for the same core.
 function autoCalculate() {
@@ -369,17 +377,15 @@ async function run(input) {
 }
 
 function clearAll() {
-  allInputs.forEach((input) => { input.value = ""; });
+  allInputs.forEach((input) => setCard(input, ""));
   refresh();
   setStatus("");
   setActive(allInputs[0]);
 }
 
-// Build order is dealing order: hand 1, hand 2, the board, then hands 3-8.
-buildSeat(0);
-buildSeat(1);
+// Build order is fill order: the community cards, then each seat in turn.
 buildBoard();
-for (let seat = 2; seat < MAX_PLAYERS; seat++) buildSeat(seat);
+for (let seat = 0; seat < MAX_PLAYERS; seat++) buildSeat(seat);
 buildDeck();
 
 clearBtn.addEventListener("click", clearAll);

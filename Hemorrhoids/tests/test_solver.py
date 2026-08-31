@@ -165,6 +165,28 @@ def test_high_low_ties_split_their_own_half():
     assert settle(hands, board) == [0.25, 0.25, 0.5]
 
 
+def test_high_and_low_halves_are_reported_separately():
+    """Same 4 / 4 / 36 board, read as two halves instead of one pot."""
+    hands = [parse_cards("4s2h3h5h7h"), parse_cards("4h2d3d5d7d"), parse_cards("KsQsJs6s7s")]
+    board = parse_cards("2s2c3s3c5s5c7cTh9h8h")
+    report = equity(hands, board)
+    assert [round(h.high_pct, 6) for h in report.hands] == [0.0, 0.0, 100.0]
+    assert [round(h.low_pct, 6) for h in report.hands] == [50.0, 50.0, 0.0]
+    # Nothing here is won outright, so each seat's equity is exactly half of
+    # each half it takes.
+    for hand in report.hands:
+        assert abs(hand.equity_pct - 0.5 * (hand.high_pct + hand.low_pct)) < 1e-9
+
+
+def test_a_pot_won_outright_counts_in_neither_half():
+    """Out before the last card takes the lot, which is never split in two."""
+    hands = [parse_cards("KsKhQsQhJs"), parse_cards("2h2d3h3d4h")]
+    board = parse_cards("KcQcJcTs" "2c3c4c" "5s6s" "7s")
+    winner = equity(hands, board).hands[0]
+    assert winner.equity_pct == 100.0 and winner.out_pct == 100.0
+    assert winner.high_pct == 0.0 and winner.low_pct == 0.0
+
+
 def test_one_card_discards_every_match():
     """A single queen takes both queens out of the hand at once."""
     mask, table = build_profile(parse_cards("QsQhJs9s2s"))

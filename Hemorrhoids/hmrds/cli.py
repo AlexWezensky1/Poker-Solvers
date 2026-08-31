@@ -62,7 +62,8 @@ def _render(report, elapsed):
 
     show_detail = any(h.detail for h in report.hands)
     width = max(len(h.label) for h in report.hands)
-    header = "  #  %-*s %9s %9s %9s %9s" % (width, "Hand", "Equity", "Scoop", "Out", "Keep")
+    header = "  #  %-*s %9s %9s %9s %9s %9s %9s" % (
+        width, "Hand", "Equity", "High", "Low", "Scoop", "Out", "Keep")
     if show_detail:
         header += "   Finish"
     print(header)
@@ -71,9 +72,10 @@ def _render(report, elapsed):
     best = max(h.equity_pct for h in report.hands)
     for hand in report.hands:
         marker = "*" if hand.equity_pct >= best - 1e-9 else " "
-        row = "%s %d  %-*s %8.2f%% %8.2f%% %8.2f%% %8.2f%%" % (
+        row = "%s %d  %-*s %8.2f%% %8.2f%% %8.2f%% %8.2f%% %8.2f%% %8.2f%%" % (
             marker, hand.index + 1, width, hand.label,
-            hand.equity_pct, hand.scoop_pct, hand.out_pct, hand.keep_pct,
+            hand.equity_pct, hand.high_pct, hand.low_pct,
+            hand.scoop_pct, hand.out_pct, hand.keep_pct,
         )
         if show_detail:
             row += "   %s" % hand.detail
@@ -93,6 +95,8 @@ def _as_dict(report, elapsed):
                 "hand": h.label,
                 "unknown": h.unknown,
                 "equity": round(h.equity_pct, 4),
+                "high": round(h.high_pct, 4),
+                "low": round(h.low_pct, 4),
                 "scoop": round(h.scoop_pct, 4),
                 "out": round(h.out_pct, 4),
                 "keep": round(h.keep_pct, 4),

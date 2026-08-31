@@ -1,8 +1,9 @@
 # HMRDS Solver
 
 Equity calculator for HMRDS. Give it up to eight five-card hands and up to ten
-community cards; it returns each hand's share of the pot, how often it scoops,
-how often it empties out and how often it keeps all five. Hands can be named
+community cards; it returns each hand's share of the pot, split into the high
+and low halves, plus how often it scoops, how often it empties out and how often
+it keeps all five. Hands can be named
 only in part — a player whose discards you can see but whose remaining cards you
 cannot is still a player — and the rest is dealt at random. Runs as a command
 line tool and as a small web app.
@@ -16,11 +17,18 @@ python -m hmrds AsKsQsJsTs 2h3h4h5h6h --board "2c3c4c5c 7h8h9h"
 ```
 Board: 2c 3c 4c 5c 7h 8h 9h   exact in 0.01s
 
-  #  Hand              Equity     Scoop       Out      Keep
-  ---------------------------------------------------------
-  1  As Ks Qs Js Ts    44.13%    10.39%     0.00%    12.47%
-* 2  2h 3h 4h 5h 6h    55.87%    22.14%    24.22%     0.00%
+  #  Hand              Equity      High       Low     Scoop       Out      Keep
+  -----------------------------------------------------------------------------
+  1  As Ks Qs Js Ts    44.13%    65.39%     0.00%    10.39%     0.00%    12.47%
+* 2  2h 3h 4h 5h 6h    55.87%     0.00%    65.39%    22.14%    24.22%     0.00%
 ```
+
+**High** and **Low** are the share of each half the hand takes, ties included, as
+a fraction of every runout. A pot won outright — by emptying out early, or by
+keeping all five — is never cut into halves, so those runouts count towards
+neither. That is why the two columns fall short of 100% between them: the gap is
+how often the hand ended before it ever reached a high/low showdown. When it
+does reach one, equity is exactly half the high share plus half the low.
 
 No dependencies are needed for the command line tool — the engine is pure
 standard library. The web app needs FastAPI:
@@ -104,7 +112,7 @@ python -m hmrds [HAND ...] [-b BOARD] [-t TRIALS] [-m MODE] [--seed N] [--json]
 | --- | --- |
 | `HAND ...` | up to 8 hands, `HELD` or `HELD/DISCARDED`; run with none to be prompted |
 | `-b`, `--board` | 0-10 community cards in dealing order |
-| `-t`, `--trials` | Monte Carlo trials (default 100,000) |
+| `-t`, `--trials` | Monte Carlo trials (default 250,000) |
 | `-m`, `--mode` | `auto`, `exact` or `monte-carlo` |
 | `--seed` | seed the sampler so a run repeats exactly |
 | `--json` | machine readable output |
@@ -122,9 +130,11 @@ python -m hmrds                                            # prompts for hands
 ## Web app
 
 Click the deck to deal. Cards land in the highlighted slot and the highlight
-moves on, in dealing order: hand 1, hand 2, the board, then the rest of the
-seats. Clicking a card that is already out takes it back. Any card the board has
-matched is struck through, because it has been discarded face up.
+moves on, in dealing order: the community cards first, then each seat in turn.
+Click any slot to jump the highlight there — dealing the opening four and then
+skipping straight to hand 1 is a click. Clicking a card that is already out
+takes it back. Any card the board has matched is struck through, because it has
+been discarded face up.
 
 It recalculates on its own as soon as two seats are ready, where a seat is ready
 once it holds five cards or once anything of its is face up. Leave a seat's
@@ -146,13 +156,15 @@ only read by their discards still counts.
 {
   "board": "2s 3s 4s 7s",
   "mode": "monte-carlo",
-  "trials": 100000.0,
-  "seconds": 1.465,
+  "trials": 250000.0,
+  "seconds": 3.739,
   "hands": [
-    { "index": 0, "hand": "As Ks Qs Js Ts", "unknown": 0, "equity": 53.65,
-      "scoop": 11.44, "out": 0.15, "keep": 5.5, "detail": "" },
-    { "index": 1, "hand": "-- / 2h 3h +3?", "unknown": 3, "equity": 46.35,
-      "scoop": 4.41, "out": 4.12, "keep": 0.0, "detail": "" }
+    { "index": 0, "hand": "As Ks Qs Js Ts", "unknown": 0, "equity": 53.74,
+      "high": 82.27, "low": 13.76, "scoop": 11.55, "out": 0.15, "keep": 5.6,
+      "detail": "" },
+    { "index": 1, "hand": "-- / 2h 3h +3?", "unknown": 3, "equity": 46.26,
+      "high": 7.98, "low": 76.49, "scoop": 4.32, "out": 4.04, "keep": 0.0,
+      "detail": "" }
   ]
 }
 ```
@@ -187,8 +199,8 @@ ten distinct ranks between them reach roughly 185M steps, about ten seconds.
 
 **Sampling.** `auto` estimates the size of the walk and falls back to Monte Carlo
 past `DEFAULT_EXACT_BUDGET`, which in practice means the opening deal. Sampling
-runs about 85,000 runouts a second, so the default 100,000 trials lands within
-roughly 0.1% and takes about a second. Hands with few distinct ranks stay exact
+runs about 85,000 runouts a second, so the default 250,000 trials lands within
+roughly 0.06% and takes about three seconds. Hands with few distinct ranks stay exact
 even on the opening deal — `KKQQJ` against `23456` walks in 1.3s.
 
 **Unknown cards** are dealt each trial before the board, which is the only order
@@ -196,8 +208,8 @@ that leaves both draws uniform, and only ever out of the cards that could still
 be hidden. Profiles are cached on ranks alone, so the thousands of repeated deals
 cost a dict lookup rather than a rebuild. A spot with unknown cards can only be
 sampled, never walked, so `auto` picks Monte Carlo for it and `--mode exact`
-refuses it outright; three unknown cards costs about half a second on top of the
-usual run.
+refuses it outright; three unknown cards costs roughly another second on top of
+the usual run.
 
 Both engines settle through the same `hmrds.scoring.resolve`, so the rules live in
 exactly one place.

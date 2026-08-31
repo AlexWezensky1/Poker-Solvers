@@ -16,7 +16,8 @@ from pydantic import BaseModel, Field
 from hmrds.cards import BOARD_SIZE, HAND_SIZE, cards_str, parse_cards
 from hmrds.equity import DEFAULT_TRIALS, MAX_PLAYERS, equity
 
-#: Keeps a single request from tying the server up for more than a second or two.
+#: The default is already this high, so this is a ceiling rather than a budget:
+#: it stops a hand-written request asking for a run that never comes back.
 MAX_TRIALS = 250_000
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -45,6 +46,8 @@ class HandResponse(BaseModel):
     hand: str
     unknown: int
     equity: float
+    high: float
+    low: float
     scoop: float
     out: float
     keep: float
@@ -98,6 +101,8 @@ def calculate(request: EquityRequest):
                 hand=hand.label,
                 unknown=hand.unknown,
                 equity=round(hand.equity_pct, 2),
+                high=round(hand.high_pct, 2),
+                low=round(hand.low_pct, 2),
                 scoop=round(hand.scoop_pct, 2),
                 out=round(hand.out_pct, 2),
                 keep=round(hand.keep_pct, 2),
