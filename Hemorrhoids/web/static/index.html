@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HMRS Solver</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>HMRS Solver</h1>
+  <p class="blurb">
+    Five cards each. Four community cards, then three, then two, then one &mdash;
+    any card matching a community rank is discarded. Empty out before the last
+    card and you win it outright.
+  </p>
+
+  <section class="panel">
+    <h2>Hands</h2>
+    <div id="hands"></div>
+    <button type="button" id="add" class="ghost">Add a hand</button>
+  </section>
+
+  <section class="panel">
+    <h2>Board</h2>
+    <input id="board" placeholder="2c3c4c5c 7h8h9h &mdash; up to 10 cards, in dealing order" autocomplete="off">
+    <div class="row">
+      <label>Mode
+        <select id="mode">
+          <option value="auto">auto</option>
+          <option value="exact">exact</option>
+          <option value="monte-carlo">monte carlo</option>
+        </select>
+      </label>
+      <label>Trials
+        <input id="trials" type="number" value="100000" min="1" max="250000" step="10000">
+      </label>
+      <button type="button" id="go">Calculate</button>
+    </div>
+  </section>
+
+  <p id="status" class="status"></p>
+  <table id="results" hidden>
+    <thead>
+      <tr><th>#</th><th>Hand</th><th>Equity</th><th>Scoop</th><th>Out</th><th>Keep</th><th>Finish</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
