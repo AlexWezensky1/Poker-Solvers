@@ -18,9 +18,7 @@ const boardEl = document.getElementById("board");
 const playersEl = document.getElementById("players");
 const deckEl = document.getElementById("deck");
 const statusEl = document.getElementById("status");
-const calculateBtn = document.getElementById("calculate");
 const clearBtn = document.getElementById("clear");
-const trialsEl = document.getElementById("trials");
 
 // allInputs is built in dealing order, so it doubles as the fill order:
 // hand 1, hand 2, flop, turn, river, hands 3-8.
@@ -100,10 +98,6 @@ function makeCardInput() {
 
   input.addEventListener("focus", () => setActive(input));
 
-  input.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") calculate();
-  });
-
   allInputs.push(input);
   return input;
 }
@@ -122,12 +116,12 @@ function buildBoard() {
   });
 }
 
-// Where a seat sits on the ring, counted clockwise from the bottom.
+// Where a seat sits on the ring, counted clockwise from the top.
 function seatPosition(index) {
   const angle = (index / MAX_PLAYERS) * 2 * Math.PI;
   return {
-    left: 50 - RING_X * Math.sin(angle),
-    top: 50 + RING_Y * Math.cos(angle),
+    left: 50 + RING_X * Math.sin(angle),
+    top: 50 - RING_Y * Math.cos(angle),
   };
 }
 
@@ -201,6 +195,7 @@ function refresh() {
   deckButtons.forEach((button, card) => button.classList.toggle("used", seen.has(card)));
 
   clearResults();
+  autoCalculate();
 }
 
 function clearResults() {
@@ -280,41 +275,49 @@ function render(hands, results) {
   });
 }
 
-async function calculate() {
+// Cards can land faster than the server answers, so each run takes a ticket
+// and a stale reply is dropped rather than painted over a newer table.
+let latest = 0;
+
+// Every card change lands here. Two complete hands is the trigger; anything
+// short of that is a half dealt table, so it waits quietly rather than
+// complaining about input the player is still in the middle of giving.
+function autoCalculate() {
   let input;
   try {
     input = collect();
   } catch (error) {
-    clearResults();
-    setStatus(error.message, true);
+    latest++;  // strand any answer still in flight for the old table
+    setStatus("");
     return;
   }
+  run(input);
+}
 
-  calculateBtn.disabled = true;
+async function run(input) {
+  const ticket = ++latest;
   setStatus("Calculating…");
   try {
     const response = await fetch("/holdem/api/equity", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      // Trials and mode are left off; the server picks its own defaults.
       body: JSON.stringify({
         hands: input.hands.map((hand) => hand.text),
         board: input.board.join(""),
-        // "exact" leaves trials unused; the server enumerates every runout.
-        mode: trialsEl.value === "exact" ? "exact" : "auto",
-        trials: trialsEl.value === "exact" ? 1 : Number(trialsEl.value),
       }),
     });
     const payload = await response.json();
+    if (ticket !== latest) return;
     if (!response.ok) throw new Error(payload.detail || "Calculation failed.");
 
     render(input.hands, payload.hands);
     const runs = payload.trials.toLocaleString();
     setStatus(runs + " runouts in " + payload.seconds + " seconds");
   } catch (error) {
+    if (ticket !== latest) return;
     clearResults();
     setStatus(error.message, true);
-  } finally {
-    calculateBtn.disabled = false;
   }
 }
 
@@ -332,7 +335,6 @@ buildBoard();
 for (let seat = 2; seat < MAX_PLAYERS; seat++) buildSeat(seat);
 buildDeck();
 
-calculateBtn.addEventListener("click", calculate);
 clearBtn.addEventListener("click", clearAll);
 setStatus("");
 setActive(allInputs[0]);

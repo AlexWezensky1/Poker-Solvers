@@ -156,11 +156,6 @@ button:hover { background: #4ac68e; }
 button:disabled { opacity: 0.55; cursor: default; }
 button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
 button.ghost:hover { background: var(--panel-2); color: var(--text); }
-.accuracy { margin-left: auto; color: var(--muted); font-size: 10px; display: flex; align-items: center; gap: 6px; }
-select {
-  background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
-  border-radius: 5px; padding: 6px 7px; font-size: 10px; font-family: var(--font);
-}
 
 .status { margin-top: 11px; color: var(--muted); font-size: 10px; min-height: 16px; }
 .status.error { color: var(--bad); }
