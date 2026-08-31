@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Texas Hold'em Solver</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>Texas Hold'em Solver</h1>
+    <p class="sub">
+      Type up to eight hands and up to five community cards, then calculate.
+      Cards are rank + suit, like <code>As</code>, <code>Th</code>, <code>7d</code>, <code>2c</code>.
+    </p>
+  </header>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Community cards</h2>
+      <span class="hint">leave blank for preflop</span>
+    </div>
+    <div id="board" class="board"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Hands</h2>
+      <span class="hint">fill in at least two</span>
+    </div>
+    <div id="players" class="players"></div>
+  </section>
+
+  <div class="controls">
+    <button id="calculate" type="button">Calculate</button>
+    <button id="clear" type="button" class="ghost">Clear</button>
+    <label class="accuracy">
+      Preflop accuracy
+      <select id="trials">
+        <option value="25000">Fast</option>
+        <option value="100000" selected>Normal</option>
+        <option value="250000">Precise</option>
+        <option value="exact">Exact (slower)</option>
+      </select>
+    </label>
+  </div>
+
+  <p id="status" class="status"></p>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>
