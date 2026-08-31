@@ -34,20 +34,6 @@ let active = null;
 
 /* ---------- card text handling ---------- */
 
-// Strips anything that cannot be part of a card and spells "10" as "T".
-// Length is left alone; the caller decides what to keep and what spills over.
-function clean(value) {
-  const v = value.replace(/[^0-9a-zA-Z]/g, "");
-  return v.slice(0, 2) === "10" ? "T" + v.slice(2) : v;
-}
-
-// Canonical "Ah" casing for a partial or complete card.
-function shape(value) {
-  if (value.length >= 1) value = value[0].toUpperCase() + value.slice(1);
-  if (value.length >= 2) value = value[0] + value[1].toLowerCase();
-  return value;
-}
-
 function isCard(value) {
   return value.length === 2 && RANKS.includes(value[0]) && SUITS.includes(value[1]);
 }
@@ -97,41 +83,26 @@ function makeCardInput() {
   input.type = "text";
   input.className = "card";
   input.placeholder = "?";
+  input.readOnly = true;  // cards only ever arrive from the deck
   input.autocomplete = "off";
   input.spellcheck = false;
   input.setAttribute("aria-label", "card");
 
-  // A slot keeps one card and hands the rest to the slot after it, so typing
-  // or pasting "AsKsQhQd" straight into the first box fills four boxes.
-  input.addEventListener("input", () => {
-    const chars = clean(input.value);
-    input.value = shape(chars.slice(0, 2));
-    const overflow = chars.slice(2);
-
-    if (isCard(input.value)) {
-      const next = allInputs[allInputs.indexOf(input) + 1];
-      if (next) {
-        next.focus();
-        if (overflow) {
-          next.value = overflow;
-          next.dispatchEvent(new Event("input"));
-          return;  // that call finishes the chain, refresh included
-        }
-      }
+  // Clicking a slot that holds a card sends that card back to the deck. Either
+  // way the slot is left armed, so the next deck click deals into it.
+  input.addEventListener("click", () => {
+    if (input.value !== "") {
+      input.value = "";
+      refresh();
     }
-    refresh();
+    setActive(input);
   });
+
+  input.addEventListener("focus", () => setActive(input));
 
   input.addEventListener("keydown", (event) => {
-    if (event.key === "Backspace" && input.value === "") {
-      const prev = allInputs[allInputs.indexOf(input) - 1];
-      if (prev) { prev.focus(); prev.select(); event.preventDefault(); }
-    } else if (event.key === "Enter") {
-      calculate();
-    }
+    if (event.key === "Enter") calculate();
   });
-
-  input.addEventListener("focus", () => { input.select(); setActive(input); });
 
   allInputs.push(input);
   return input;

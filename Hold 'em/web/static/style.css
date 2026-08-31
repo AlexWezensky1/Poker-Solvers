@@ -51,6 +51,7 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
   font: 600 20px/1 var(--font);
   text-align: center;
   padding: 0;
+  cursor: pointer;
 }
 .card::placeholder { color: #4b5a68; font-weight: 400; font-size: 15px; }
 .card:focus { outline: none; }
@@ -63,7 +64,7 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
 .card.suit-c { color: var(--club); }
 
 /* The table: hands around the ring, board in the middle */
-.table-panel { padding: 10px 10px 26px; }
+.table-panel { padding: 0 10px; display: flex; justify-content: center; }
 .table {
   position: relative;
   width: 100%;
@@ -165,8 +166,29 @@ select {
 .status.error { color: var(--bad); }
 
 /* Too narrow for the ring: board on top, hands stacked below it. */
+@media (min-width: 941px) {
+  body { height: 100dvh; overflow: hidden; }
+  main { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+  .table-panel { flex: 1 1 auto; min-height: 0; align-items: flex-start; }
+  .table { height: min(100%, 600px); width: auto; max-width: 100%; container-type: inline-size; }
+
+  .player { width: 21.7cqw; gap: 0.83cqw; padding: 1.11cqw; border-radius: 1.39cqw; }
+  .seat { font-size: max(8px, 1.53cqw); }
+  .holecards { gap: 1.11cqw; }
+  .card { width: 7.22cqw; height: 8.61cqw; font-size: 2.78cqw; border-radius: 1.11cqw; }
+  .card::placeholder { font-size: 2.08cqw; }
+  .board { gap: 1.11cqw; }
+  .board .card { width: 5.83cqw; height: 6.94cqw; font-size: 2.22cqw; border-radius: 0.83cqw; }
+  .board .card::placeholder { font-size: 1.67cqw; }
+  .slot { gap: 0.56cqw; }
+  .slot-label { font-size: max(7px, 1.25cqw); }
+  .equity-pct { font-size: max(11px, 2.5cqw); }
+  .breakdown { font-size: max(8px, 1.53cqw); }
+  .bar { height: 0.69cqw; margin: 0.69cqw 0 0.56cqw; }
+}
+
 @media (max-width: 940px) {
-  .table { aspect-ratio: auto; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .table { width: 100%; aspect-ratio: auto; display: flex; flex-direction: column; align-items: center; gap: 16px; }
   .felt { display: none; }
   .board { position: static; transform: none; flex-wrap: wrap; justify-content: center; }
   .players {

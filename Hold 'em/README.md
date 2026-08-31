@@ -64,7 +64,7 @@ python -m holdem                                    # prompts for hands
 
 ## Web app
 
-`POST /api/equity`
+`POST /holdem/api/equity`
 
 ```json
 { "hands": ["AsKs", "QhQd"], "board": "Jh Ts 2c", "trials": 100000, "mode": "auto" }
@@ -83,20 +83,8 @@ python -m holdem                                    # prompts for hands
 }
 ```
 
-Bad input comes back as a `400` with a plain english `detail`. `GET /api/health`
-is a liveness probe. Interactive API docs are at `/api/docs`.
-
-## Deploying to Railway
-
-The app is a stock Nixpacks Python service. From the Railway dashboard:
-
-1. **New Project → Deploy from GitHub repo**, and pick this repository.
-2. In **Settings → Source**, set **Root Directory** to `Hold 'em`, since the
-   repository holds several solvers side by side.
-3. Deploy. Railway installs `requirements.txt` and runs the start command from
-   `railway.json`, binding to the `$PORT` it provides.
-
-`Procfile` carries the same start command for any other Procfile-based host.
+Bad input comes back as a `400` with a plain english `detail`. `GET /holdem/api/health`
+is a liveness probe. Interactive API docs are at `/holdem/api/docs`.
 
 ## How it works
 
