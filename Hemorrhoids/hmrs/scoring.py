@@ -20,6 +20,8 @@ The pot is settled in this order:
    low total, each half split evenly among ties.
 """
 
+from functools import lru_cache
+
 from .cards import HAND_SIZE, RANK_CHARS, STREETS
 
 #: Rank index 0..12 is deuce..ace.  Jacks, queens and kings all count ten.
@@ -30,18 +32,24 @@ HIGH_VALUE = LOW_VALUE[:12] + (11,)
 LAST_STREET = len(STREETS) - 1
 
 
-def build_profile(cards):
+@lru_cache(maxsize=None)
+def profile_for_ranks(ranks):
     """Precompute everything scoring needs about one hand.
 
-    Returns ``(mask, table)`` where ``mask`` is the hand's rank mask and
-    ``table`` maps every surviving submask of it to ``(cards_left, low, high)``.
-    A hand spans at most five distinct ranks, so the table holds at most 32
-    rows and survival becomes ``table[mask & ~board]`` -- one AND and one dict
-    lookup per player per runout.
+    ``ranks`` is a sorted tuple of rank indices, one per card.  Returns
+    ``(mask, table)`` where ``mask`` is the hand's rank mask and ``table`` maps
+    every surviving submask of it to ``(cards_left, low, high)``.  A hand spans
+    at most five distinct ranks, so the table holds at most 32 rows and survival
+    becomes ``table[mask & ~board]`` -- one AND and one dict lookup per player
+    per runout.
+
+    Suits never matter, so the cache is keyed on ranks alone.  Sampling unknown
+    hole cards leans on that: there are only a few thousand distinct five card
+    rank multisets, so after a moment every deal is a cache hit.
     """
     counts = {}
-    for card in cards:
-        counts[card >> 2] = counts.get(card >> 2, 0) + 1
+    for rank in ranks:
+        counts[rank] = counts.get(rank, 0) + 1
     mask = 0
     for rank in counts:
         mask |= 1 << rank
@@ -60,6 +68,11 @@ def build_profile(cards):
             break
         sub = (sub - 1) & mask
     return mask, table
+
+
+def build_profile(cards):
+    """Profile one hand given as cards."""
+    return profile_for_ranks(tuple(sorted(card >> 2 for card in cards)))
 
 
 def build_profiles(hands):

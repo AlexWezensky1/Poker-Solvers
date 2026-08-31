@@ -25,7 +25,14 @@ app = FastAPI(title="HMRS Solver", docs_url="/hmrs/api/docs", redoc_url=None)
 
 
 class EquityRequest(BaseModel):
-    hands: list[str] = Field(..., description="Five card hands, e.g. ['AsKsQsJsTs', '2h3h4h5h6h']")
+    hands: list[str] = Field(
+        ..., description="Cards each player still holds, e.g. ['AsKsQsJsTs', '2h3h4h5h6h']"
+    )
+    discards: list[str] = Field(
+        default_factory=list,
+        description="Cards each player has turned face up, in the same seat order. "
+                    "Whatever hands and discards leave unnamed is dealt at random.",
+    )
     board: str = Field("", description="0-10 community cards in dealing order")
     trials: int = Field(DEFAULT_TRIALS, ge=1, le=MAX_TRIALS)
     mode: Literal["auto", "exact", "monte-carlo"] = Field(
@@ -36,6 +43,7 @@ class EquityRequest(BaseModel):
 class HandResponse(BaseModel):
     index: int
     hand: str
+    unknown: int
     equity: float
     scoop: float
     out: float
@@ -65,17 +73,16 @@ def health():
 @app.post("/hmrs/api/equity", response_model=EquityResponse)
 def calculate(request: EquityRequest):
     try:
-        hands = []
-        for i, text in enumerate(request.hands):
-            cards = parse_cards(text)
-            if len(cards) != HAND_SIZE:
-                raise ValueError("hand %d has %d cards, expected %d"
-                                 % (i + 1, len(cards), HAND_SIZE))
-            hands.append(cards)
+        hands = [parse_cards(text) for text in request.hands]
+        discards = [
+            parse_cards(request.discards[i] if i < len(request.discards) else "")
+            for i in range(len(hands))
+        ]
         board = parse_cards(request.board)
 
         started = perf_counter()
-        report = equity(hands, board, trials=request.trials, mode=request.mode)
+        report = equity(hands, board, discards=discards,
+                        trials=request.trials, mode=request.mode)
         elapsed = perf_counter() - started
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -89,6 +96,7 @@ def calculate(request: EquityRequest):
             HandResponse(
                 index=hand.index,
                 hand=hand.label,
+                unknown=hand.unknown,
                 equity=round(hand.equity_pct, 2),
                 scoop=round(hand.scoop_pct, 2),
                 out=round(hand.out_pct, 2),

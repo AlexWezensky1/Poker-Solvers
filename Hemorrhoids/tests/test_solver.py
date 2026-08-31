@@ -269,16 +269,64 @@ def test_describe_reads_a_finished_hand():
     assert report.hands[1].detail.startswith("J ")
 
 
+def test_discards_are_just_part_of_the_hand():
+    """Naming a hand as held plus discarded settles exactly as the whole hand."""
+    board = parse_cards("2s2c3s3c5s5c7cTh9h8h")
+    whole = equity([parse_cards("As2h3h5h7h"), parse_cards("Jh2d3d5d7d")], board)
+    split = equity(
+        [parse_cards("As"), parse_cards("Jh")], board,
+        discards=[parse_cards("2h3h5h7h"), parse_cards("2d3d5d7d")],
+    )
+    for a, b in zip(whole.hands, split.hands):
+        assert abs(a.equity_pct - b.equity_pct) < 1e-9, (a.equity_pct, b.equity_pct)
+
+
+def test_unknown_cards_cannot_be_ones_the_board_already_matched():
+    """A matched card would be lying face up, so it can never be the hidden one.
+
+    The board covers ranks 2-6 exactly. Hero holds a lone ace after four
+    discards; the villain has four discards and one unknown card. That card can
+    only be a rank the board has not shown, so the villain always still holds
+    it and can never have gone out. Hero then scoops unless the villain happens
+    to hold an ace too, which ties both halves.
+
+    31 cards could still be hidden and 3 of them are aces, so hero's equity is
+    exactly (28 + 3 * 0.5) / 31.
+    """
+    board = parse_cards("2s2h3s3h" "4s4h5s" "5h6s" "6h")
+    report = equity(
+        [parse_cards("Ah"), []], board,
+        discards=[parse_cards("2d3d4d5d"), parse_cards("2c3c4c5c")],
+        trials=100_000, seed=17,
+    )
+    assert report.hands[1].unknown == 1
+    assert report.hands[1].out_pct == 0.0
+    expected = 100.0 * (28 + 3 * 0.5) / 31
+    assert abs(report.hands[0].equity_pct - expected) < 0.3, (
+        report.hands[0].equity_pct, expected)
+
+
+def test_exact_refuses_unknown_cards():
+    try:
+        equity([parse_cards("AsKsQsJsTs"), parse_cards("2h3h")], (), mode="exact")
+    except ValueError as exc:
+        assert "monte-carlo" in str(exc), exc
+    else:
+        raise AssertionError("exact should not accept an unknown card")
+
+
 def test_rejects_bad_hands():
     good = parse_cards("AsKsQsJsTs")
-    for hands, board, expected in (
-        ([good], (), "at least 2"),
-        ([good, parse_cards("2h3h4h5h")], (), "expected 5"),
-        ([good, parse_cards("AsKsQsJsTs")], (), "twice"),
-        ([good, parse_cards("2h3h4h5h6h")], parse_cards("2s3s4s5s6s7s8s9sTsJsQs"), "at most 10"),
+    for hands, board, discards, expected in (
+        ([good], (), None, "at least 2"),
+        ([good, parse_cards("2h3h4h5h6h7h")], (), None, "more than the 5"),
+        ([good, parse_cards("AsKsQsJsTs")], (), None, "twice"),
+        ([good, parse_cards("2h3h4h5h6h")],
+         parse_cards("2s3s4s5s6s7s8s9sTsJsQs"), None, "at most 10"),
+        ([good, parse_cards("2h3h4h")], (), [(), parse_cards("5h6h")], "no community card"),
     ):
         try:
-            equity(hands, board)
+            equity(hands, board, discards=discards)
         except ValueError as exc:
             assert expected in str(exc), (expected, str(exc))
         else:

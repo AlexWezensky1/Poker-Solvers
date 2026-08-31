@@ -1,76 +1,180 @@
 :root {
-  color-scheme: light dark;
-  --bg: #11141a;
-  --panel: #1a1f28;
-  --line: #2b3341;
-  --ink: #e6eaf0;
-  --dim: #8b95a6;
-  --accent: #4ea1ff;
-  --win: #3ddc97;
+  --bg: #10161c;
+  --panel: #182029;
+  --panel-2: #1f2933;
+  --line: #2b3742;
+  --text: #e6edf3;
+  --muted: #8b9aa8;
+  --accent: #3fb27f;
+  --accent-dim: #2c7a58;
+  --bad: #e05252;
+  --spade: #e6edf3;
+  --heart: #ff6b6b;
+  --diamond: #57a6ff;
+  --club: #4fd18b;
+  --font: Helvetica, "Helvetica Neue", Arial, sans-serif;
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  padding: 2rem 1rem 4rem;
+  padding: 26px 16px 51px;
   background: var(--bg);
-  color: var(--ink);
-  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--text);
+  font: 12px/1.5 var(--font);
 }
 
-main { max-width: 46rem; margin: 0 auto; }
+main { max-width: 768px; margin: 0 auto; }
 
-h1 { margin: 0 0 .25rem; font-size: 1.6rem; letter-spacing: -.01em; }
-h2 { margin: 0 0 .75rem; font-size: .8rem; text-transform: uppercase;
-     letter-spacing: .08em; color: var(--dim); font-weight: 600; }
-
-.blurb { margin: 0 0 1.5rem; color: var(--dim); max-width: 40rem; }
+header { margin-bottom: 18px; }
+h1 { margin: 0; font-size: 21px; letter-spacing: -0.01em; }
+.blurb { margin: 6px 0 0; color: var(--muted); max-width: 52em; }
 
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 1rem;
-  margin-bottom: 1rem;
+  border-radius: 8px;
+  padding: 13px;
+  margin-bottom: 13px;
 }
 
-input, select, button {
-  font: inherit;
-  color: var(--ink);
-  background: #131820;
+/* Card slots. Hand sized here; the board overrides just below. */
+.card {
+  width: 34px; height: 42px;
+  background: var(--panel-2);
   border: 1px solid var(--line);
-  border-radius: 7px;
-  padding: .5rem .65rem;
+  border-radius: 6px;
+  color: var(--text);
+  font: 600 14px/1 var(--font);
+  text-align: center;
+  padding: 0;
+  cursor: pointer;
+  caret-color: transparent;
+}
+.card::placeholder { color: #4b5a68; font-weight: 400; font-size: 12px; }
+.card:focus { outline: none; }
+/* The slot the next deck click deals into. */
+.card.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(63, 178, 127, 0.3); }
+.card.invalid { border-color: var(--bad); box-shadow: 0 0 0 2px rgba(224, 82, 82, 0.2); }
+/* The board has matched this rank, so the card is lying face up. */
+.card.discarded { opacity: 0.4; text-decoration: line-through; border-style: dashed; }
+.card.suit-s { color: var(--spade); }
+.card.suit-h { color: var(--heart); }
+.card.suit-d { color: var(--diamond); }
+.card.suit-c { color: var(--club); }
+
+/* The board, with the four streets standing off from one another */
+.board-panel { position: relative; display: flex; justify-content: center; padding: 20px 13px; }
+.felt {
+  position: absolute; inset: 6px;
+  border-radius: 50% / 34%;
+  border: 1px solid var(--line);
+  background: radial-gradient(ellipse at center, rgba(63, 178, 127, 0.10), rgba(63, 178, 127, 0.02) 72%, transparent);
+}
+.board {
+  position: relative;
+  display: flex; gap: 6px;
+  flex-wrap: wrap; justify-content: center;
+}
+.board .card { width: 40px; height: 48px; font-size: 16px; }
+.board .card::placeholder { font-size: 13px; }
+.slot { display: flex; }
+.board .slot.street { margin-left: 12px; }
+
+/* Seats. Five cards plus a discard note will not fit a ring, so they lay out
+   as a grid that reflows on its own. */
+.players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
+  gap: 10px;
+}
+.player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  min-width: 0;
+}
+.player.leader { border-color: var(--accent-dim); background: rgba(63, 178, 127, 0.07); }
+.seat { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+.holecards { display: flex; gap: 5px; }
+.note { color: var(--muted); font-size: 10px; }
+.note:empty { display: none; }
+
+.result { width: 100%; text-align: center; }
+.result.empty { display: none; }
+.equity-pct { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* One line each, so a seat never grows into the one beside it. */
+.breakdown {
+  color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bar { height: 5px; border-radius: 3px; background: var(--panel); margin: 5px 0 4px; overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+
+/* Deck */
+.deck-panel { display: flex; align-items: flex-start; gap: 16px; }
+.side { flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px; }
+.status-sizer {
+  display: block; height: 0; overflow: hidden; visibility: hidden;
+  white-space: nowrap; font-size: 10px;
+}
+.deck {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(13, minmax(0, 1fr));
+  gap: 5px;
+  max-width: 624px;
+}
+.deck-card {
+  display: flex; align-items: center; justify-content: center; gap: 1px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--text);
+  font: 600 11px/1 var(--font);
+  padding: 7px 0;
+  cursor: pointer;
+}
+.deck-card:hover { background: #26323d; border-color: var(--accent); }
+.deck-card.used { opacity: 0.28; }
+.deck-card.suit-s { color: var(--spade); }
+.deck-card.suit-h { color: var(--heart); }
+.deck-card.suit-d { color: var(--diamond); }
+.deck-card.suit-c { color: var(--club); }
+.pip { font-size: 10px; }
+
+/* Controls */
+button {
+  background: var(--accent); color: #06110b; border: 0; border-radius: 6px;
+  padding: 9px 18px; font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: var(--font);
+}
+button:hover { background: #4ac68e; }
+button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+button.ghost:hover { background: var(--panel-2); color: var(--text); }
+
+.status { margin: 0; color: var(--muted); font-size: 10px; min-height: 16px; }
+.status.error { color: var(--bad); }
+
+@media (max-width: 940px) {
+  .deck-panel { flex-direction: column; }
+  /* Column flex, so flex-grow works on the vertical axis: the deck has to be
+     told to fill the width outright. */
+  .deck { max-width: none; width: 100%; }
+  .side { flex-direction: row; align-items: center; width: 100%; }
+  .status-sizer { display: none; }
 }
 
-input { width: 100%; }
-input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-
-.hand { display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; }
-.hand .seat { width: 1.5rem; color: var(--dim); text-align: right; flex: none; }
-.hand input { font-variant-ligatures: none; letter-spacing: .02em; }
-.hand button { flex: none; color: var(--dim); padding: .5rem .6rem; }
-
-.row { display: flex; gap: .75rem; align-items: end; margin-top: .75rem; flex-wrap: wrap; }
-.row label { display: flex; flex-direction: column; gap: .25rem;
-             font-size: .8rem; color: var(--dim); }
-.row label input { width: 8rem; }
-
-button { cursor: pointer; }
-button:hover { border-color: var(--accent); }
-#go { background: var(--accent); border-color: var(--accent); color: #06121f; font-weight: 600; }
-#go:hover { filter: brightness(1.1); }
-.ghost { color: var(--dim); }
-
-.status { color: var(--dim); min-height: 1.5rem; margin: .25rem 0 1rem; }
-.status.error { color: #ff8080; }
-
-table { width: 100%; border-collapse: collapse; }
-th, td { padding: .5rem .6rem; text-align: right; border-bottom: 1px solid var(--line); }
-th:nth-child(-n+2), td:nth-child(-n+2), th:last-child, td:last-child { text-align: left; }
-th { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); }
-td { font-variant-numeric: tabular-nums; }
-tr.best td { color: var(--win); font-weight: 600; }
-td.cards { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-td.finish { color: var(--dim); font-size: .85rem; }
+@media (max-width: 620px) {
+  .deck { gap: 4px; }
+  .deck-card { font-size: 10px; padding: 6px 0; }
+  .pip { font-size: 9px; }
+  .board .card { width: 34px; height: 42px; font-size: 14px; }
+  .board .slot.street { margin-left: 8px; }
+}

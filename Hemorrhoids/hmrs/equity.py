@@ -21,9 +21,11 @@ from math import comb
 
 from .cards import (
     BOARD_SIZE, FULL_DECK, HAND_SIZE, RANK_BIT, STREETS,
-    cards_str, check_no_duplicates, rank_mask,
+    card_str, cards_str, check_no_duplicates, rank_mask,
 )
-from .scoring import LAST_STREET, build_profiles, describe, empty_seats, resolve, showdown
+from .scoring import (
+    LAST_STREET, build_profiles, describe, empty_seats, profile_for_ranks, resolve, showdown,
+)
 
 #: Ten community cards plus five apiece caps the table at eight.
 MAX_PLAYERS = (52 - BOARD_SIZE) // HAND_SIZE
@@ -42,11 +44,20 @@ class HandEquity:
     outs: float
     keeps: float
     trials: float
+    held: tuple = ()
+    discarded: tuple = ()
+    unknown: int = 0
     detail: str = ""
 
     @property
     def label(self):
-        return cards_str(self.cards)
+        """The hand as dealt: what is held, what is face up, what is unknown."""
+        text = cards_str(self.held) or "--"
+        if self.discarded:
+            text += " / " + cards_str(self.discarded)
+        if self.unknown:
+            text += " +%d?" % self.unknown
+        return text
 
     def _pct(self, value):
         return 100.0 * value / self.trials if self.trials else 0.0
@@ -83,17 +94,32 @@ class EquityReport:
         return self.mode == "exact"
 
 
-def _validate(hands, board):
+def _validate(hands, board, discards):
     if len(hands) < 2:
         raise ValueError("need at least 2 hands to compare")
     if len(hands) > MAX_PLAYERS:
         raise ValueError("at most %d hands are supported" % MAX_PLAYERS)
-    for i, hand in enumerate(hands):
-        if len(hand) != HAND_SIZE:
-            raise ValueError("hand %d has %d cards, expected %d" % (i + 1, len(hand), HAND_SIZE))
     if len(board) > BOARD_SIZE:
         raise ValueError("the board holds at most %d cards, got %d" % (BOARD_SIZE, len(board)))
-    groups = [("hand %d" % (i + 1), h) for i, h in enumerate(hands)]
+
+    turned = rank_mask(board)
+    for i, held in enumerate(hands):
+        named = len(held) + len(discards[i])
+        if named > HAND_SIZE:
+            raise ValueError("hand %d names %d cards, more than the %d dealt"
+                             % (i + 1, named, HAND_SIZE))
+        # A card only ever leaves your hand because a community card matched it,
+        # so a discard with nothing to match it means the input disagrees with
+        # the board.
+        for card in discards[i]:
+            if not RANK_BIT[card] & turned:
+                raise ValueError("hand %d discarded %s, but no community card matches that rank"
+                                 % (i + 1, card_str(card)))
+
+    groups = []
+    for i, held in enumerate(hands):
+        groups.append(("hand %d" % (i + 1), held))
+        groups.append(("hand %d's discards" % (i + 1), discards[i]))
     check_no_duplicates(groups + [("the board", board)])
 
 
@@ -210,13 +236,38 @@ def _exact(masks, tables, avail, bits, filler, needs, known_masks):
     return fill(0, avail, known_masks[0], filler)
 
 
-def _monte_carlo(masks, tables, deck, needs, known_masks, trials, seed):
-    """Deal the rest of the board ``trials`` times and settle each runout."""
-    n = len(masks)
+def _monte_carlo(known, unknown, deck, hole_pool, needs, known_masks, trials, seed):
+    """Deal the rest of the board ``trials`` times and settle each runout.
+
+    Hands that are only partly known have their missing cards dealt as well,
+    out of ``hole_pool`` -- the cards that could still be in somebody's hand.
+    Anything the board has already matched would have been discarded face up,
+    so it cannot be one of them.
+    """
+    n = len(known)
     rng = random.Random(seed)
     sample = rng.sample
     wanted = sum(needs)
+    hidden = sum(unknown)
     streets = range(len(STREETS))
+
+    # Seats that are fully known keep the profile built here for every trial;
+    # the rest are rebuilt each deal, which the rank cache makes cheap.
+    base = [tuple(sorted(card >> 2 for card in cards)) for cards in known]
+    profiles = [profile_for_ranks(ranks) for ranks in base]
+    masks = [profile[0] for profile in profiles]
+    tables = [profile[1] for profile in profiles]
+
+    # The hidden cards have to be drawn before the board, or neither draw comes
+    # out uniform. Shuffling just the front of `spare` picks them and leaves the
+    # rest of the pool as one slice, which beats filtering the deck every trial.
+    spare = list(hole_pool)
+    blocked = []
+    if hidden:
+        hideable = set(hole_pool)
+        blocked = [card for card in deck if card not in hideable]
+    reach = len(spare)
+    randrange = rng.randrange
 
     pot = [0.0] * n
     scoops = [0.0] * n
@@ -224,7 +275,21 @@ def _monte_carlo(masks, tables, deck, needs, known_masks, trials, seed):
     keeps = [0.0] * n
 
     for _ in range(trials):
-        draw = sample(deck, wanted)
+        pool = deck
+        if hidden:
+            for i in range(hidden):
+                j = randrange(i, reach)
+                spare[i], spare[j] = spare[j], spare[i]
+            pool = spare[hidden:] + blocked
+            at = 0
+            for seat in range(n):
+                missing = unknown[seat]
+                if missing:
+                    filled = base[seat] + tuple(c >> 2 for c in spare[at:at + missing])
+                    at += missing
+                    masks[seat], tables[seat] = profile_for_ranks(tuple(sorted(filled)))
+
+        draw = sample(pool, wanted)
         boards = []
         turned = 0
         at = 0
@@ -255,71 +320,103 @@ def _exact_cost(live, unknown, needs):
     return comb(unknown + live, live) * comb(max(needs) + live, live)
 
 
-def equity(hands, board=(), trials=DEFAULT_TRIALS, seed=None,
+def equity(hands, board=(), discards=None, trials=DEFAULT_TRIALS, seed=None,
            mode="auto", exact_budget=DEFAULT_EXACT_BUDGET):
     """Compute equity for two or more HMRS hands.
 
-    ``hands`` is a sequence of five-card sequences and ``board`` holds 0-10
-    community cards in dealing order, all as card ints from :mod:`hmrs.cards`.
+    ``hands`` holds what each player is still known to be holding and
+    ``discards`` what they have already turned face up, both as sequences of
+    card ints from :mod:`hmrs.cards`.  Everyone is dealt five, so whatever the
+    two do not account for is unknown and gets dealt at random each trial --
+    out of the cards the board has not matched, since a matched card would be
+    lying face up rather than hidden.  ``board`` holds 0-10 community cards in
+    dealing order.
 
     ``mode`` is ``"auto"`` (walk every runout when affordable, otherwise
     sample), ``"exact"`` to force the full walk, or ``"monte-carlo"`` to force
-    sampling.
+    sampling.  Unknown cards can only be sampled.
     """
     hands = [tuple(h) for h in hands]
     board = tuple(board)
-    _validate(hands, board)
+    if discards is None:
+        discards = [()] * len(hands)
+    else:
+        discards = [tuple(pile) for pile in discards]
+        if len(discards) != len(hands):
+            raise ValueError("got %d hands but %d discard piles"
+                             % (len(hands), len(discards)))
+    _validate(hands, board, discards)
+
+    known = [hands[i] + discards[i] for i in range(len(hands))]
+    unknown = [HAND_SIZE - len(cards) for cards in known]
+    hidden = sum(unknown)
 
     dead = set(board)
-    for hand in hands:
-        dead.update(hand)
+    for cards in known:
+        dead.update(cards)
     deck = [c for c in FULL_DECK if c not in dead]
 
     needs, known_masks = _layout(board)
-    unknown = sum(needs)
-    if unknown > len(deck):
-        raise ValueError("only %d cards left, the board still needs %d" % (len(deck), unknown))
+    to_come = sum(needs)
+    if to_come + hidden > len(deck):
+        raise ValueError("only %d cards are left but %d are still needed"
+                         % (len(deck), to_come + hidden))
 
-    masks, tables = build_profiles(hands)
+    # Anything the board has already matched would have been discarded, so it
+    # cannot be one of the cards a player is still hiding.
+    hole_pool = [c for c in deck if not RANK_BIT[c] & rank_mask(board)]
+    if hidden > len(hole_pool):
+        raise ValueError("only %d cards could still be in a hand but %d are unknown"
+                         % (len(hole_pool), hidden))
 
-    live = sorted({card >> 2 for hand in hands for card in hand})
-    avail = tuple(sum(1 for c in deck if c >> 2 == rank) for rank in live)
-    bits = tuple(1 << rank for rank in live)
-    filler = len(deck) - sum(avail)
-
+    live = sorted({card >> 2 for cards in known for card in cards})
     if mode == "auto":
-        affordable = _exact_cost(len(live), unknown, needs) <= exact_budget
-        mode = "exact" if affordable else "monte-carlo"
+        if hidden:
+            mode = "monte-carlo"
+        else:
+            affordable = _exact_cost(len(live), to_come, needs) <= exact_budget
+            mode = "exact" if affordable else "monte-carlo"
+    elif mode == "exact" and hidden:
+        raise ValueError("%d card%s unknown, which only monte-carlo can deal"
+                         % (hidden, " is" if hidden == 1 else "s are"))
 
     if mode == "exact":
+        masks, tables = build_profiles(known)
+        avail = tuple(sum(1 for c in deck if c >> 2 == rank) for rank in live)
+        bits = tuple(1 << rank for rank in live)
+        filler = len(deck) - sum(avail)
         pot, scoops, outs, keeps = _exact(masks, tables, avail, bits, filler, needs, known_masks)
         total = 1.0
     elif mode == "monte-carlo":
         if trials < 1:
             raise ValueError("trials must be at least 1")
         pot, scoops, outs, keeps = _monte_carlo(
-            masks, tables, deck, needs, known_masks, trials, seed)
+            known, unknown, deck, hole_pool, needs, known_masks, trials, seed)
         total = float(trials)
     else:
         raise ValueError("unknown mode %r" % mode)
 
-    # With every community card out there is a single runout, so it can be
-    # narrated hand by hand.
+    # With every community card out and every hand named there is a single
+    # runout, so it can be narrated hand by hand.
     detail = [""] * len(hands)
-    if len(board) == BOARD_SIZE:
+    if len(board) == BOARD_SIZE and not hidden:
+        masks, tables = build_profiles(known)
         boards = _cumulative(known_masks)
         detail = [describe(masks, tables, boards, seat) for seat in range(len(hands))]
 
     report = EquityReport(board=board, mode=mode, trials=total)
-    for i, hand in enumerate(hands):
+    for i in range(len(hands)):
         report.hands.append(HandEquity(
             index=i,
-            cards=hand,
+            cards=known[i],
             equity=pot[i],
             scoops=scoops[i],
             outs=outs[i],
             keeps=keeps[i],
             trials=total,
+            held=hands[i],
+            discarded=discards[i],
+            unknown=unknown[i],
             detail=detail[i],
         ))
     return report

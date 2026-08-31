@@ -2,8 +2,10 @@
 
 Equity calculator for HMRS. Give it up to eight five-card hands and up to ten
 community cards; it returns each hand's share of the pot, how often it scoops,
-how often it empties out and how often it keeps all five. Runs as a command line
-tool and as a small web app.
+how often it empties out and how often it keeps all five. Hands can be named
+only in part — a player whose discards you can see but whose remaining cards you
+cannot is still a player — and the rest is dealt at random. Runs as a command
+line tool and as a small web app.
 
 ## Quick start
 
@@ -76,6 +78,22 @@ Hands and boards can be written packed (`AsKsQsJsTs`) or spaced, in any case.
 Board cards are read in dealing order: the first four are the opening community
 cards, then three, then two, then one.
 
+A hand may also be written `HELD/DISCARDED`, and whatever the two leave unnamed
+is an unknown card still in the hand:
+
+| Written | Means |
+| --- | --- |
+| `AsKsQsJsTs` | the whole hand |
+| `AsKsQs/2h3h` | three held, two face up |
+| `/2h3h` | two face up, three cards you cannot see |
+| `AsKs` | two held, three cards you cannot see |
+
+Unknown cards are dealt at random on every trial, out of the cards that could
+still be in a hand — anything the board has already matched would be lying face
+up, so it is never one of them. A discard the board cannot account for is
+rejected, since a card only ever leaves your hand because a community card
+matched it.
+
 ## Command line
 
 ```
@@ -84,7 +102,7 @@ python -m hmrs [HAND ...] [-b BOARD] [-t TRIALS] [-m MODE] [--seed N] [--json]
 
 | Option | Meaning |
 | --- | --- |
-| `HAND ...` | up to 8 five-card hands; run with none to be prompted |
+| `HAND ...` | up to 8 hands, `HELD` or `HELD/DISCARDED`; run with none to be prompted |
 | `-b`, `--board` | 0-10 community cards in dealing order |
 | `-t`, `--trials` | Monte Carlo trials (default 100,000) |
 | `-m`, `--mode` | `auto`, `exact` or `monte-carlo` |
@@ -97,31 +115,50 @@ Examples:
 python -m hmrs KsKhQsQhJs AcKdQdJdTd                      # opening deal, sampled
 python -m hmrs KsKhQsQhJs AcKdQdJdTd --mode exact         # walked in full
 python -m hmrs AsKsQsJsTs 2h3h4h5h6h -b "2c3c4c5c" --json
+python -m hmrs AsKsQsJsTs /2c3c -b "2s3s4s7s"             # villain read only by discards
 python -m hmrs                                            # prompts for hands
 ```
 
 ## Web app
 
+Click the deck to deal. Cards land in the highlighted slot and the highlight
+moves on, in dealing order: hand 1, hand 2, the board, then the rest of the
+seats. Clicking a card that is already out takes it back. Any card the board has
+matched is struck through, because it has been discarded face up.
+
+It recalculates on its own as soon as two seats are ready, where a seat is ready
+once it holds five cards or once anything of its is face up. Leave a seat's
+remaining slots empty and those cards are dealt at random, so a player you can
+only read by their discards still counts.
+
 `POST /hmrs/api/equity`
 
 ```json
-{ "hands": ["AsKsQsJsTs", "2h3h4h5h6h"], "board": "2c3c4c5c 7h8h9h", "mode": "auto" }
+{
+  "hands": ["AsKsQsJsTs", ""],
+  "discards": ["", "2h3h"],
+  "board": "2s3s4s7s",
+  "mode": "auto"
+}
 ```
 
 ```json
 {
-  "board": "2c 3c 4c 5c 7h 8h 9h",
-  "mode": "exact",
-  "trials": 1.0,
-  "seconds": 0.005,
+  "board": "2s 3s 4s 7s",
+  "mode": "monte-carlo",
+  "trials": 100000.0,
+  "seconds": 1.465,
   "hands": [
-    { "index": 0, "hand": "As Ks Qs Js Ts", "equity": 44.13, "scoop": 10.39,
-      "out": 0.0, "keep": 12.47, "detail": "" },
-    { "index": 1, "hand": "2h 3h 4h 5h 6h", "equity": 55.87, "scoop": 22.14,
-      "out": 24.22, "keep": 0.0, "detail": "" }
+    { "index": 0, "hand": "As Ks Qs Js Ts", "unknown": 0, "equity": 53.65,
+      "scoop": 11.44, "out": 0.15, "keep": 5.5, "detail": "" },
+    { "index": 1, "hand": "-- / 2h 3h +3?", "unknown": 3, "equity": 46.35,
+      "scoop": 4.41, "out": 4.12, "keep": 0.0, "detail": "" }
   ]
 }
 ```
+
+`hands` is what each seat still holds and `discards` what it has turned face up,
+in the same seat order. Both may be left short; the remainder is unknown.
 
 Bad input comes back as a `400` with a plain english `detail`. `GET /hmrs/api/health`
 is a liveness probe. Interactive API docs are at `/hmrs/api/docs`.
@@ -154,6 +191,14 @@ runs about 85,000 runouts a second, so the default 100,000 trials lands within
 roughly 0.1% and takes about a second. Hands with few distinct ranks stay exact
 even on the opening deal — `KKQQJ` against `23456` walks in 1.3s.
 
+**Unknown cards** are dealt each trial before the board, which is the only order
+that leaves both draws uniform, and only ever out of the cards that could still
+be hidden. Profiles are cached on ranks alone, so the thousands of repeated deals
+cost a dict lookup rather than a rebuild. A spot with unknown cards can only be
+sampled, never walked, so `auto` picks Monte Carlo for it and `--mode exact`
+refuses it outright; three unknown cards costs about half a second on top of the
+usual run.
+
 Both engines settle through the same `hmrs.scoring.resolve`, so the rules live in
 exactly one place.
 
@@ -169,3 +214,9 @@ force walk over real card combinations, and the whole rule set is checked over
 4,000 random boards against a second, deliberately plodding implementation
 written separately in the test file that shares nothing with the engine but the
 rules.
+
+Unknown cards get their own check with an answer worked out by hand: a board
+covering exactly ranks 2-6, hero on a lone ace, the villain on four discards and
+one hidden card. That card can only be a rank the board has not shown, so hero
+scoops unless the villain holds an ace too — 3 of the 31 cards that could still
+be hidden — which puts hero at exactly (28 + 3 × 0.5) / 31.

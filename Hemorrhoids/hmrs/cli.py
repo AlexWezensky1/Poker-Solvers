@@ -10,17 +10,28 @@ from .equity import DEFAULT_TRIALS, MAX_PLAYERS, equity
 
 
 def _parse_hand(text):
-    cards = parse_cards(text)
-    if len(cards) != HAND_SIZE:
-        raise ValueError("%r is %d cards; an HMRS hand is exactly %d"
-                         % (text, len(cards), HAND_SIZE))
-    return cards
+    """Parse ``HELD`` or ``HELD/DISCARDED``, returning the two piles.
+
+    Whatever the two do not account for is an unknown card still in the hand,
+    so ``/2h3h`` is a player whose discards you can see but whose remaining
+    three cards you cannot.
+    """
+    held_text, slash, discard_text = text.partition("/")
+    held = parse_cards(held_text)
+    discarded = parse_cards(discard_text) if slash else []
+    named = len(held) + len(discarded)
+    if named > HAND_SIZE:
+        raise ValueError("%r names %d cards; a hand is %d" % (text, named, HAND_SIZE))
+    if not named:
+        raise ValueError("%r names no cards" % text)
+    return held, discarded
 
 
 def _prompt_for_input():
     """Ask for hands and a board when none were given on the command line."""
-    print("Enter one hand per line (e.g. 'As Ks Qs Js Ts'). Blank line when done.")
-    hands = []
+    print("Enter one hand per line (e.g. 'As Ks Qs Js Ts', or 'AsKs/2h3h' with discards).")
+    print("Blank line when done.")
+    hands, discards = [], []
     while len(hands) < MAX_PLAYERS:
         try:
             line = input("  hand %d: " % (len(hands) + 1)).strip()
@@ -29,14 +40,17 @@ def _prompt_for_input():
         if not line:
             break
         try:
-            hands.append(_parse_hand(line))
+            held, tossed = _parse_hand(line)
         except ValueError as exc:
             print("    %s" % exc)
+            continue
+        hands.append(held)
+        discards.append(tossed)
     try:
         board = parse_cards(input("  board (0-%d cards, blank for the deal): " % BOARD_SIZE))
     except EOFError:
         board = []
-    return hands, board
+    return hands, discards, board
 
 
 def _render(report, elapsed):
@@ -77,6 +91,7 @@ def _as_dict(report, elapsed):
             {
                 "index": h.index + 1,
                 "hand": h.label,
+                "unknown": h.unknown,
                 "equity": round(h.equity_pct, 4),
                 "scoop": round(h.scoop_pct, 4),
                 "out": round(h.out_pct, 4),
@@ -96,7 +111,9 @@ def build_parser():
     )
     parser.add_argument(
         "hands", nargs="*", metavar="HAND",
-        help="a %d card hand such as AsKsQsJsTs (up to %d)" % (HAND_SIZE, MAX_PLAYERS),
+        help="a %d card hand such as AsKsQsJsTs, or HELD/DISCARDED such as "
+             "AsKsQs/2h3h; anything unnamed is an unknown card still held "
+             "(up to %d hands)" % (HAND_SIZE, MAX_PLAYERS),
     )
     parser.add_argument(
         "-b", "--board", default="", metavar="CARDS",
@@ -120,12 +137,15 @@ def main(argv=None):
 
     try:
         if args.hands:
-            hands = [_parse_hand(h) for h in args.hands]
+            parsed = [_parse_hand(h) for h in args.hands]
+            hands = [held for held, _ in parsed]
+            discards = [tossed for _, tossed in parsed]
             board = parse_cards(args.board)
         else:
-            hands, board = _prompt_for_input()
+            hands, discards, board = _prompt_for_input()
         started = perf_counter()
-        report = equity(hands, board, trials=args.trials, seed=args.seed, mode=args.mode)
+        report = equity(hands, board, discards=discards,
+                        trials=args.trials, seed=args.seed, mode=args.mode)
         elapsed = perf_counter() - started
     except ValueError as exc:
         print("error: %s" % exc, file=sys.stderr)

@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -8,44 +8,33 @@
 </head>
 <body>
 <main>
-  <h1>HMRS Solver</h1>
-  <p class="blurb">
-    Five cards each. Four community cards, then three, then two, then one &mdash;
-    any card matching a community rank is discarded. Empty out before the last
-    card and you win it outright.
-  </p>
+  <header>
+    <h1>HMRS Solver</h1>
+    <p class="blurb">
+      Click the deck to deal. Any card the board matches is struck through &mdash;
+      it has been discarded face up. Leave a seat's remaining slots empty and
+      those cards are dealt at random, so a player you can only read by their
+      discards still counts.
+    </p>
+  </header>
 
-  <section class="panel">
-    <h2>Hands</h2>
-    <div id="hands"></div>
-    <button type="button" id="add" class="ghost">Add a hand</button>
-  </section>
-
-  <section class="panel">
-    <h2>Board</h2>
-    <input id="board" placeholder="2c3c4c5c 7h8h9h &mdash; up to 10 cards, in dealing order" autocomplete="off">
-    <div class="row">
-      <label>Mode
-        <select id="mode">
-          <option value="auto">auto</option>
-          <option value="exact">exact</option>
-          <option value="monte-carlo">monte carlo</option>
-        </select>
-      </label>
-      <label>Trials
-        <input id="trials" type="number" value="100000" min="1" max="250000" step="10000">
-      </label>
-      <button type="button" id="go">Calculate</button>
+  <section class="panel deck-panel">
+    <div id="deck" class="deck"></div>
+    <div class="side">
+      <button id="clear" type="button" class="ghost">Clear</button>
+      <!-- Holds the column at the width of the longest line it can ever show,
+           so a shorter status never resizes the deck beside it. -->
+      <span class="status-sizer" aria-hidden="true">100,000 simulations in 10.123 seconds</span>
+      <p id="status" class="status"></p>
     </div>
   </section>
 
-  <p id="status" class="status"></p>
-  <table id="results" hidden>
-    <thead>
-      <tr><th>#</th><th>Hand</th><th>Equity</th><th>Scoop</th><th>Out</th><th>Keep</th><th>Finish</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <section class="panel board-panel">
+    <div class="felt"></div>
+    <div id="board" class="board"></div>
+  </section>
+
+  <section id="players" class="players"></section>
 </main>
 <script src="app.js"></script>
 </body>
