@@ -9,10 +9,12 @@ const BOARD_SIZE = 5;
 const DECK_RANKS = "AKQJT98765432";
 const SUIT_PIPS = { s: "♠", h: "♥", d: "♦", c: "♣" };
 
-// Seat ring, as a percentage of the table box. Hand 1 sits at the bottom and
-// the rest run clockwise around it; the board sits in the middle.
-const RING_X = 38;
-const RING_Y = 34;
+// Seats ring the board around a three by three grid, clockwise from the top,
+// with the board itself in the middle cell. Cells cannot overlap, so neither
+// can two seats, however tall their results grow.
+const SEAT_CELLS = [
+  [1, 2], [1, 3], [2, 3], [3, 3], [3, 2], [3, 1], [2, 1], [1, 1],
+];
 
 const boardEl = document.getElementById("board");
 const playersEl = document.getElementById("players");
@@ -113,21 +115,18 @@ function buildBoard() {
   }
 }
 
-// Where a seat sits on the ring, counted clockwise from the top.
+// Which grid cell a seat occupies, counted clockwise from the top.
 function seatPosition(index) {
-  const angle = (index / MAX_PLAYERS) * 2 * Math.PI;
-  return {
-    left: 50 + RING_X * Math.sin(angle),
-    top: 50 - RING_Y * Math.cos(angle),
-  };
+  const [row, column] = SEAT_CELLS[index];
+  return { row, column };
 }
 
 function buildSeat(seat) {
   const row = document.createElement("div");
   row.className = "player";
   const spot = seatPosition(seat);
-  row.style.left = spot.left + "%";
-  row.style.top = spot.top + "%";
+  row.style.gridRow = spot.row;
+  row.style.gridColumn = spot.column;
 
   const number = document.createElement("div");
   number.className = "seat";
@@ -267,8 +266,9 @@ function render(hands, results) {
     if (result.best_hand) {
       const made = document.createElement("div");
       made.className = "breakdown";
-      made.textContent = result.best_hand;
-      made.title = result.best_hand;  // the seat is narrow, so it may be clipped
+      const label = result.best_hand[0].toUpperCase() + result.best_hand.slice(1);
+      made.textContent = label;
+      made.title = label;  // the seat is narrow, so it may be clipped
       player.result.appendChild(made);
     }
 
