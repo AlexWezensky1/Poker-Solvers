@@ -12,47 +12,43 @@
   --heart: #ff6b6b;
   --diamond: #57a6ff;
   --club: #4fd18b;
+  --font: Helvetica, "Helvetica Neue", Arial, sans-serif;
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  padding: 32px 20px 64px;
+  padding: 26px 16px 51px;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 12px/1.5 var(--font);
 }
 
-main { max-width: 960px; margin: 0 auto; }
+main { max-width: 768px; margin: 0 auto; }
 
-header { margin-bottom: 28px; }
-h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -0.01em; }
-h2 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-.sub { margin: 0; color: var(--muted); max-width: 60ch; }
-code {
-  background: var(--panel-2); padding: 1px 5px; border-radius: 4px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px;
-}
+header { margin-bottom: 22px; }
+h1 { margin: 0; font-size: 21px; letter-spacing: -0.01em; }
+h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 16px;
-  margin-bottom: 16px;
+  border-radius: 8px;
+  padding: 13px;
+  margin-bottom: 13px;
 }
-.panel-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
-.hint { color: var(--muted); font-size: 13px; }
+.panel-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.hint { color: var(--muted); font-size: 10px; }
 
-/* Card inputs */
+/* Card inputs. These are hand sized; the board overrides down to 80% below. */
 .card {
   width: 52px; height: 62px;
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--text);
-  font: 600 20px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font: 600 20px/1 var(--font);
   text-align: center;
   padding: 0;
 }
@@ -67,11 +63,11 @@ code {
 .card.suit-c { color: var(--club); }
 
 /* The table: hands around the ring, board in the middle */
-.table-panel { padding: 12px 12px 32px; }
+.table-panel { padding: 10px 10px 26px; }
 .table {
   position: relative;
   width: 100%;
-  max-width: 900px;
+  max-width: 720px;
   margin: 0 auto;
   aspect-ratio: 6 / 5;
 }
@@ -87,10 +83,12 @@ code {
   position: absolute;
   left: 50%; top: 50%;
   transform: translate(-50%, -50%);
-  display: flex; gap: 10px;
+  display: flex; gap: 8px;
 }
-.slot { display: flex; flex-direction: column; gap: 5px; align-items: center; }
-.slot-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.board .card { width: 42px; height: 50px; font-size: 16px; border-radius: 6px; }
+.board .card::placeholder { font-size: 12px; }
+.slot { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.slot-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 
 .players { position: absolute; inset: 0; }
 .player {
@@ -124,18 +122,18 @@ code {
 .deck {
   display: grid;
   grid-template-columns: repeat(13, minmax(0, 1fr));
-  gap: 6px;
-  max-width: 780px;
+  gap: 5px;
+  max-width: 624px;
   margin: 0 auto;
 }
 .deck-card {
   display: flex; align-items: center; justify-content: center; gap: 1px;
   background: var(--panel-2);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 5px;
   color: var(--text);
-  font: 600 14px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  padding: 9px 0;
+  font: 600 11px/1 var(--font);
+  padding: 7px 0;
   cursor: pointer;
 }
 .deck-card:hover { background: #26323d; border-color: var(--accent); }
@@ -144,25 +142,26 @@ code {
 .deck-card.suit-h { color: var(--heart); }
 .deck-card.suit-d { color: var(--diamond); }
 .deck-card.suit-c { color: var(--club); }
-.pip { font-size: 13px; }
+.pip { font-size: 10px; }
 
 /* Controls */
-.controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+.controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
 button {
-  background: var(--accent); color: #06110b; border: 0; border-radius: 8px;
-  padding: 11px 22px; font-size: 15px; font-weight: 600; cursor: pointer;
+  background: var(--accent); color: #06110b; border: 0; border-radius: 6px;
+  padding: 9px 18px; font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: var(--font);
 }
 button:hover { background: #4ac68e; }
 button:disabled { opacity: 0.55; cursor: default; }
 button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
 button.ghost:hover { background: var(--panel-2); color: var(--text); }
-.accuracy { margin-left: auto; color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.accuracy { margin-left: auto; color: var(--muted); font-size: 10px; display: flex; align-items: center; gap: 6px; }
 select {
   background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
-  border-radius: 6px; padding: 7px 9px; font-size: 13px;
+  border-radius: 5px; padding: 6px 7px; font-size: 10px; font-family: var(--font);
 }
 
-.status { margin-top: 14px; color: var(--muted); font-size: 13px; min-height: 20px; }
+.status { margin-top: 11px; color: var(--muted); font-size: 10px; min-height: 16px; }
 .status.error { color: var(--bad); }
 
 /* Too narrow for the ring: board on top, hands stacked below it. */
@@ -180,6 +179,6 @@ select {
 
 @media (max-width: 620px) {
   .deck { gap: 4px; }
-  .deck-card { font-size: 12px; padding: 8px 0; }
-  .pip { font-size: 11px; }
+  .deck-card { font-size: 10px; padding: 6px 0; }
+  .pip { font-size: 9px; }
 }

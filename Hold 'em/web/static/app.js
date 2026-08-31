@@ -322,7 +322,7 @@ async function calculate() {
   calculateBtn.disabled = true;
   setStatus("Calculating…");
   try {
-    const response = await fetch("/api/equity", {
+    const response = await fetch("/holdem/api/equity", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -338,9 +338,7 @@ async function calculate() {
 
     render(input.hands, payload.hands);
     const runs = payload.trials.toLocaleString();
-    setStatus(payload.mode === "exact"
-      ? "Exact: every one of " + runs + " runouts, in " + payload.seconds + "s."
-      : runs + " simulated runouts, in " + payload.seconds + "s.");
+    setStatus(runs + " runouts in " + payload.seconds + " seconds");
   } catch (error) {
     clearResults();
     setStatus(error.message, true);

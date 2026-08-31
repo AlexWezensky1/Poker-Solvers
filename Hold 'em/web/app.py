@@ -9,6 +9,7 @@ from time import perf_counter
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -20,7 +21,7 @@ MAX_TRIALS = 250_000
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
-app = FastAPI(title="Texas Hold'em Solver", docs_url="/api/docs", redoc_url=None)
+app = FastAPI(title="Texas Hold'em Solver", docs_url="/holdem/api/docs", redoc_url=None)
 
 
 class EquityRequest(BaseModel):
@@ -49,12 +50,12 @@ class EquityResponse(BaseModel):
     hands: list[HandResponse]
 
 
-@app.get("/api/health")
+@app.get("/holdem/api/health")
 def health():
     return {"status": "ok", "max_players": MAX_PLAYERS, "max_trials": MAX_TRIALS}
 
 
-@app.post("/api/equity", response_model=EquityResponse)
+@app.post("/holdem/api/equity", response_model=EquityResponse)
 def calculate(request: EquityRequest):
     try:
         hands = []
@@ -90,4 +91,10 @@ def calculate(request: EquityRequest):
     )
 
 
-app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+@app.get("/", include_in_schema=False)
+def index():
+    """The solver lives under /holdem; keep the bare domain pointing at it."""
+    return RedirectResponse("/holdem/")
+
+
+app.mount("/holdem", StaticFiles(directory=STATIC_DIR, html=True), name="static")

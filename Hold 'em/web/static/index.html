@@ -4,26 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Texas Hold'em Solver</title>
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main>
   <header>
     <h1>Texas Hold'em Solver</h1>
-    <p class="sub">
-      Click a card in the deck to deal it into the highlighted slot: hand 1, hand 2,
-      the board, then hands 3 to 8. You can also type into any slot, like
-      <code>As</code>, <code>Th</code>, <code>7d</code>, <code>2c</code>.
-    </p>
   </header>
-
-  <section class="panel table-panel">
-    <div class="table">
-      <div class="felt"></div>
-      <div id="board" class="board"></div>
-      <div id="players" class="players"></div>
-    </div>
-  </section>
 
   <section class="panel">
     <div class="panel-head">
@@ -48,7 +35,15 @@
   </div>
 
   <p id="status" class="status"></p>
+
+  <section class="panel table-panel">
+    <div class="table">
+      <div class="felt"></div>
+      <div id="board" class="board"></div>
+      <div id="players" class="players"></div>
+    </div>
+  </section>
 </main>
-<script src="/app.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
