@@ -3,3 +3,6 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
+
+# Claude Code scratch worktrees (a second checkout of this repo)
+.claude/worktrees/
