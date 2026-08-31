@@ -38,6 +38,19 @@ function isCard(value) {
   return value.length === 2 && RANKS.includes(value[0]) && SUITS.includes(value[1]);
 }
 
+// A slot shows "A♠" but everything downstream still works in "As", so the
+// canonical card rides along in a data attribute and these two are the only
+// places that know the difference.
+function cardOf(input) {
+  return input.dataset.card || "";
+}
+
+function setCard(input, card) {
+  input.dataset.card = card;
+  input.value = card ? card[0] + SUIT_PIPS[card[1]] : "";
+  input.setAttribute("aria-label", card || "empty card slot");
+}
+
 /* ---------- the slot the deck deals into ---------- */
 
 function setActive(input) {
@@ -53,7 +66,7 @@ function setActive(input) {
 function nextEmpty(from) {
   for (let step = 1; step <= allInputs.length; step++) {
     const slot = allInputs[(from + step) % allInputs.length];
-    if (slot.value === "") return slot;
+    if (cardOf(slot) === "") return slot;
   }
   return null;
 }
@@ -61,9 +74,9 @@ function nextEmpty(from) {
 // A deck click deals into the highlighted slot and moves on to the next empty
 // one; clicking a card that is already out takes it back off the table.
 function pick(card) {
-  const holder = allInputs.find((slot) => slot.value === card);
+  const holder = allInputs.find((slot) => cardOf(slot) === card);
   if (holder) {
-    holder.value = "";
+    setCard(holder, "");
     refresh();
     setActive(holder);
     return;
@@ -71,7 +84,7 @@ function pick(card) {
   if (!active) return;
 
   const from = allInputs.indexOf(active);
-  active.value = card;
+  setCard(active, card);
   refresh();
   setActive(nextEmpty(from));
 }
@@ -86,13 +99,13 @@ function makeCardInput() {
   input.readOnly = true;  // cards only ever arrive from the deck
   input.autocomplete = "off";
   input.spellcheck = false;
-  input.setAttribute("aria-label", "card");
+  setCard(input, "");
 
   // Clicking a slot that holds a card sends that card back to the deck. Either
   // way the slot is left armed, so the next deck click deals into it.
   input.addEventListener("click", () => {
-    if (input.value !== "") {
-      input.value = "";
+    if (cardOf(input) !== "") {
+      setCard(input, "");
       refresh();
     }
     setActive(input);
@@ -175,13 +188,13 @@ function buildDeck() {
 function refresh() {
   const seen = new Map();
   allInputs.forEach((input) => {
-    const value = input.value;
+    const value = cardOf(input);
     if (!isCard(value)) return;
     seen.set(value, (seen.get(value) || 0) + 1);
   });
 
   allInputs.forEach((input) => {
-    const value = input.value;
+    const value = cardOf(input);
     const bad = value !== "" && (!isCard(value) || seen.get(value) > 1);
     input.classList.toggle("invalid", bad);
     input.classList.remove("suit-s", "suit-h", "suit-d", "suit-c");
@@ -212,14 +225,15 @@ function setStatus(message, isError) {
 function collect() {
   const board = [];
   for (const input of boardInputs) {
-    if (input.value === "") continue;
-    if (!isCard(input.value)) throw new Error("'" + input.value + "' is not a card.");
-    board.push(input.value);
+    const card = cardOf(input);
+    if (card === "") continue;
+    if (!isCard(card)) throw new Error("'" + card + "' is not a card.");
+    board.push(card);
   }
 
   const hands = [];
   players.forEach((player, seat) => {
-    const [a, b] = player.inputs.map((input) => input.value);
+    const [a, b] = player.inputs.map(cardOf);
     if (a === "" && b === "") return;
     if (!isCard(a) || !isCard(b)) {
       throw new Error("Hand " + (seat + 1) + " needs two cards, like As Ks.");
@@ -323,7 +337,7 @@ async function run(input) {
 }
 
 function clearAll() {
-  allInputs.forEach((input) => { input.value = ""; });
+  allInputs.forEach((input) => setCard(input, ""));
   refresh();
   setStatus("");
   setActive(allInputs[0]);
