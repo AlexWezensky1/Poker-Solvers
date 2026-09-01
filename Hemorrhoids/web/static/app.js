@@ -17,8 +17,8 @@ const deckEl = document.getElementById("deck");
 const statusEl = document.getElementById("status");
 const clearBtn = document.getElementById("clear");
 
-// allInputs is built in dealing order, so it doubles as the fill order:
-// the board first, then each seat in turn.
+// Every slot on the table, in the order they are laid out. The order deck
+// clicks travel in is a different thing entirely -- see fillOrder below.
 const allInputs = [];
 const boardInputs = [];
 const players = [];
@@ -65,11 +65,25 @@ function setActive(input) {
   if (input) input.focus();
 }
 
-// The next empty slot after the given position in dealing order, wrapping
-// round to the start.
+// The order a run of deck clicks fills the table in: your own hand, then the
+// four community cards that open the game, then the rest of the seats, and the
+// later streets last. It is not how the cards are dealt -- everybody is dealt
+// before any community card is -- but it is the order they become known to
+// somebody sitting at the table, which is the order they get entered in.
+const fillOrder = [];
+
+function buildFillOrder() {
+  fillOrder.push(...players[0].inputs);
+  fillOrder.push(...boardInputs.slice(0, STREETS[0]));
+  for (const player of players.slice(1)) fillOrder.push(...player.inputs);
+  fillOrder.push(...boardInputs.slice(STREETS[0]));
+}
+
+// The next empty slot after the given position in fill order, wrapping round
+// to the start.
 function nextEmpty(from) {
-  for (let step = 1; step <= allInputs.length; step++) {
-    const slot = allInputs[(from + step) % allInputs.length];
+  for (let step = 1; step <= fillOrder.length; step++) {
+    const slot = fillOrder[(from + step) % fillOrder.length];
     if (!cardOf(slot)) return slot;
   }
   return null;
@@ -87,7 +101,7 @@ function pick(card) {
   }
   if (!active) return;
 
-  const from = allInputs.indexOf(active);
+  const from = fillOrder.indexOf(active);
   setCard(active, card);
   refresh();
   setActive(nextEmpty(from));
@@ -380,14 +394,16 @@ function clearAll() {
   allInputs.forEach((input) => setCard(input, ""));
   refresh();
   setStatus("");
-  setActive(allInputs[0]);
+  setActive(fillOrder[0]);
 }
 
-// Build order is fill order: the community cards, then each seat in turn.
+// Laid out board first so it sits above the seats; the order clicks fill in
+// is set separately, once every slot exists.
 buildBoard();
 for (let seat = 0; seat < MAX_PLAYERS; seat++) buildSeat(seat);
 buildDeck();
+buildFillOrder();
 
 clearBtn.addEventListener("click", clearAll);
 setStatus("");
-setActive(allInputs[0]);
+setActive(fillOrder[0]);
