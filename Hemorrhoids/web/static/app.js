@@ -18,9 +18,10 @@ const statusEl = document.getElementById("status");
 const clearBtn = document.getElementById("clear");
 const speedEl = document.getElementById("speed");
 
-// Fast samples a fixed 250,000 runouts whatever the table looks like; precise
-// walks every one of them. Sampling lands within about 0.1% of the true number
-// and takes about a second, where an exact opening deal can take ten.
+// Fast walks every runout when that is cheap and samples 250,000 of them when
+// it is not, so a settled board still answers exactly and instantly; precise
+// always walks. Sampling lands within about 0.1% of the true number and takes
+// about a second, where an exact opening deal can take ten.
 const FAST_TRIALS = 250000;
 let speed = "fast";
 
@@ -378,7 +379,7 @@ async function run(input) {
         hands: input.seats.map((s) => s.held),
         discards: input.seats.map((s) => s.discarded),
         board: input.board.join(""),
-        mode: speed === "fast" ? "monte-carlo" : "exact",
+        mode: speed === "fast" ? "auto" : "exact",
         trials: FAST_TRIALS,
       }),
     });

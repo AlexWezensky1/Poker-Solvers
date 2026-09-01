@@ -180,10 +180,10 @@ button.ghost:hover { background: var(--panel-2); color: var(--text); }
 .status { margin: 0; color: var(--muted); font-size: 10px; min-height: 16px; }
 .status.error { color: var(--bad); }
 
-.glossary h2 {
-  margin: 0 0 8px; font-size: 10px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
-}
+/* The seats are a bare grid rather than a panel, so they carry no margin of
+   their own; this is what sets the legend the same distance off them as the
+   panels above are set off each other. */
+.glossary { margin-top: 13px; }
 .glossary ul { margin: 0; padding-left: 16px; }
 .glossary li { color: var(--muted); margin-bottom: 6px; max-width: 62em; }
 .glossary li:last-child { margin-bottom: 0; }
