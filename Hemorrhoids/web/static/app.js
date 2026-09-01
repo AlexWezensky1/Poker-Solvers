@@ -23,6 +23,7 @@ const speedEl = document.getElementById("speed");
 // always walks. Sampling lands within about 0.1% of the true number and takes
 // about a second, where an exact opening deal can take ten.
 const FAST_TRIALS = 250000;
+const PRECISE_TRIALS = 1000000;
 let speed = "fast";
 
 // Every slot on the table, in the order they are laid out. The order deck
@@ -371,6 +372,16 @@ function fire() {
 async function run(input) {
   const ticket = ++latest;
   setStatus("Calculating…");
+
+  // The walk cannot deal cards nobody has named: every way of filling them in
+  // is a different set of live ranks, so each one would need its own walk and
+  // none of the work carries over. Precise samples those tables instead, and
+  // samples them four times as hard as Fast does -- error falls with the root
+  // of the trial count, so that halves it.
+  const unknown = input.seats.some(
+    (seat) => (seat.held.length + seat.discarded.length) / 2 < HAND_SIZE);
+  const precise = speed === "precise";
+  const mode = precise ? (unknown ? "monte-carlo" : "exact") : "auto";
   try {
     const response = await fetch("/hmrds/api/equity", {
       method: "POST",
@@ -379,8 +390,8 @@ async function run(input) {
         hands: input.seats.map((s) => s.held),
         discards: input.seats.map((s) => s.discarded),
         board: input.board.join(""),
-        mode: speed === "fast" ? "auto" : "exact",
-        trials: FAST_TRIALS,
+        mode: mode,
+        trials: precise ? PRECISE_TRIALS : FAST_TRIALS,
       }),
     });
     const payload = await response.json();
@@ -391,7 +402,9 @@ async function run(input) {
     const how = payload.mode === "exact"
       ? "exact"
       : Math.round(payload.trials).toLocaleString() + " simulations";
-    setStatus(how + " in " + payload.seconds + " seconds");
+    // Say why Precise sampled, so the button does not look like it was ignored.
+    const why = precise && unknown ? "unknown cards, " : "";
+    setStatus(why + how + " in " + payload.seconds + " seconds");
   } catch (error) {
     if (ticket !== latest) return;
     clearResults();

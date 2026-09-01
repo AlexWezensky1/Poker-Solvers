@@ -16,9 +16,11 @@ from pydantic import BaseModel, Field
 from hmrds.cards import BOARD_SIZE, HAND_SIZE, cards_str, parse_cards
 from hmrds.equity import DEFAULT_TRIALS, MAX_PLAYERS, equity
 
-#: The default is already this high, so this is a ceiling rather than a budget:
-#: it stops a hand-written request asking for a run that never comes back.
-MAX_TRIALS = 250_000
+#: A ceiling rather than a budget: it stops a hand-written request asking for a
+#: run that never comes back. The page asks for the whole million only when a
+#: seat holds cards nobody has named, since the exact walk cannot deal those and
+#: sampling is all that is left -- about fifteen seconds' worth.
+MAX_TRIALS = 1_000_000
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
