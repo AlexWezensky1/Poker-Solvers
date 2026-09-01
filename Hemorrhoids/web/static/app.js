@@ -369,7 +369,7 @@ function render(seats, results) {
     rest.className = "breakdown";
     rest.textContent = "Out " + result.out.toFixed(1) + "%  Keep " + result.keep.toFixed(1) + "%";
 
-    player.result.append(pct, bar, halves, scoop, rest);
+    player.result.append(pct, bar, halves, rest, scoop);
 
     if (result.detail) {
       const made = document.createElement("div");
@@ -439,10 +439,10 @@ async function run(input) {
 
     render(input.seats, payload.hands);
     const how = payload.mode === "exact"
-      ? "exact"
+      ? "Exact"
       : Math.round(payload.trials).toLocaleString() + " simulations";
     // Say why Precise sampled, so the button does not look like it was ignored.
-    const why = precise && payload.mode !== "exact" ? "too many unknowns, " : "";
+    const why = precise && payload.mode !== "exact" ? "Too many unknowns, " : "";
     setStatus(why + how + " in " + payload.seconds + " seconds");
   } catch (error) {
     if (ticket !== latest) return;
