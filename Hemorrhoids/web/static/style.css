@@ -118,17 +118,18 @@ h1 { margin: 0; font-size: 21px; letter-spacing: -0.01em; }
 
 /* Deck */
 .deck-panel { display: flex; align-items: flex-start; gap: 16px; }
-.side { flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px; }
-.status-sizer {
-  display: block; height: 0; overflow: hidden; visibility: hidden;
-  white-space: nowrap; font-size: 10px;
-}
+
+/* 470 + 16 + 254 is the panel's inner width. Both columns are pinned, so a
+   longer status line wraps inside its own column instead of widening it and
+   shuffling the deck along -- `flex: none` rather than a basis, because the
+   panel turns into a column below and a basis would set heights there. */
+.side { flex: none; width: 254px; display: flex; flex-direction: column; gap: 10px; }
 .deck {
-  flex: 1 1 auto;
+  flex: none;
+  width: 470px;
   display: grid;
   grid-template-columns: repeat(13, minmax(0, 1fr));
   gap: 5px;
-  max-width: 624px;
 }
 .deck-card {
   display: flex; align-items: center; justify-content: center; gap: 1px;
@@ -193,11 +194,10 @@ button.ghost:hover { background: var(--panel-2); color: var(--text); }
   .deck-panel { flex-direction: column; }
   /* Column flex, so flex-grow works on the vertical axis: the deck has to be
      told to fill the width outright. */
-  .deck { max-width: none; width: 100%; }
+  .deck { width: 100%; }
   .side { flex-direction: row; align-items: center; width: 100%; }
   .speed { flex: 0 0 auto; }
   .seg { flex: 0 0 auto; }
-  .status-sizer { display: none; }
 }
 
 @media (max-width: 620px) {
