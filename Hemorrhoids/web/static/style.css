@@ -29,7 +29,6 @@ main { max-width: 768px; margin: 0 auto; }
 
 header { margin-bottom: 18px; }
 h1 { margin: 0; font-size: 21px; letter-spacing: -0.01em; }
-.blurb { margin: 6px 0 0; color: var(--muted); max-width: 52em; }
 
 .panel {
   background: var(--panel);
@@ -159,8 +158,36 @@ button:hover { background: #4ac68e; }
 button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
 button.ghost:hover { background: var(--panel-2); color: var(--text); }
 
+/* Two halves of one control, so they read as a pair rather than two buttons
+   that happen to sit together. */
+.speed { display: flex; }
+.seg {
+  flex: 1 1 0;
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 8px 12px; font-size: 11px; font-weight: 600;
+}
+.seg:first-child { border-radius: 6px 0 0 6px; }
+.seg:last-child { border-radius: 0 6px 6px 0; border-left: 0; }
+.seg:hover { background: var(--panel-2); color: var(--text); }
+.seg.on {
+  background: rgba(63, 178, 127, 0.12);
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
 .status { margin: 0; color: var(--muted); font-size: 10px; min-height: 16px; }
 .status.error { color: var(--bad); }
+
+.glossary h2 {
+  margin: 0 0 8px; font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+}
+.glossary ul { margin: 0; padding-left: 16px; }
+.glossary li { color: var(--muted); margin-bottom: 6px; max-width: 62em; }
+.glossary li:last-child { margin-bottom: 0; }
+.glossary b { color: var(--text); font-weight: 600; }
 
 @media (max-width: 940px) {
   .deck-panel { flex-direction: column; }
@@ -168,6 +195,8 @@ button.ghost:hover { background: var(--panel-2); color: var(--text); }
      told to fill the width outright. */
   .deck { max-width: none; width: 100%; }
   .side { flex-direction: row; align-items: center; width: 100%; }
+  .speed { flex: 0 0 auto; }
+  .seg { flex: 0 0 auto; }
   .status-sizer { display: none; }
 }
 

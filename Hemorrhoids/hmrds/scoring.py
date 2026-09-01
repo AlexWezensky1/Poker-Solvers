@@ -145,8 +145,13 @@ def resolve(hand_masks, tables, boards):
     return showdown(hand_masks, tables, boards[LAST_STREET])
 
 
-def describe(hand_masks, tables, boards, seat):
-    """A short account of how one seat finished a completed runout."""
+def describe(hand_masks, tables, boards, seat, hand):
+    """A short account of how one seat finished a completed runout.
+
+    ``hand`` is the seat's own cards.  The mask cannot stand in for them here:
+    it carries one bit per rank, so a pair reads as a single card and the
+    listing would come up short of the total printed beside it.
+    """
     for street in range(LAST_STREET):
         if not hand_masks[seat] & ~boards[street]:
             return "out on street %d" % (street + 1)
@@ -156,7 +161,17 @@ def describe(hand_masks, tables, boards, seat):
     left, low, high = tables[seat][survivors]
     if left == HAND_SIZE:
         return "kept all %d" % HAND_SIZE
-    held = " ".join(RANK_CHARS[r] for r in range(12, -1, -1) if survivors >> r & 1)
+
+    # One entry per card still held, so a pair shows twice and the ranks add up
+    # to the total.  A rank the board has turned takes every copy at once, so a
+    # surviving rank keeps all of its.
+    counts = {}
+    for card in hand:
+        rank = card >> 2
+        if survivors >> rank & 1:
+            counts[rank] = counts.get(rank, 0) + 1
+    held = " ".join(RANK_CHARS[rank] for rank in range(12, -1, -1)
+                    for _ in range(counts.get(rank, 0)))
     if low == high:
         return "%s (%d)" % (held, low)
     return "%s (%d low / %d high)" % (held, low, high)

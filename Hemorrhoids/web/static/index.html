@@ -10,17 +10,15 @@
 <main>
   <header>
     <h1>HMRDS Solver</h1>
-    <p class="blurb">
-      Click the deck to deal. Any card the board matches is struck through &mdash;
-      it has been discarded face up. Leave a seat's remaining slots empty and
-      those cards are dealt at random, so a player you can only read by their
-      discards still counts.
-    </p>
   </header>
 
   <section class="panel deck-panel">
     <div id="deck" class="deck"></div>
     <div class="side">
+      <div id="speed" class="speed" role="group" aria-label="Solver speed">
+        <button type="button" class="seg on" data-speed="fast">Fast</button>
+        <button type="button" class="seg" data-speed="precise">Precise</button>
+      </div>
       <button id="clear" type="button" class="ghost">Clear</button>
       <!-- Holds the column at the width of the longest line it can ever show,
            so a shorter status never resizes the deck beside it. -->
@@ -35,6 +33,29 @@
   </section>
 
   <section id="players" class="players"></section>
+
+  <section class="panel glossary">
+    <h2>What the numbers mean</h2>
+    <ul>
+      <li><b>Equity</b> is the share of the pot a hand takes on average, counted
+        over every runout. It is the only figure here that is a share of the pot
+        rather than a frequency, and the seats always add up to 100%.</li>
+      <li><b>High</b> is the share of the high half a hand wins, counted only
+        over the runouts that reach a high/low showdown. A pot won outright is
+        never split into halves, so those runouts contribute nothing here.</li>
+      <li><b>Low</b> is the same figure for the low half. One hand can take both
+        halves at once, because it carries a separate low and high total &mdash;
+        which is how a lone ace scoops a lone jack.</li>
+      <li><b>Scoop</b> is how often a hand takes the whole pot, whether by
+        emptying out alone before the last community card, by being the only one
+        left holding all five, or by winning both halves at showdown.</li>
+      <li><b>Out</b> is how often a hand empties out, on any street. Going out
+        before the last community card wins the pot outright, so an early out is
+        worth far more than a late one.</li>
+      <li><b>Keep</b> is how often a hand still holds all five cards once the
+        last community card is turned. A lone keeper takes the whole pot.</li>
+    </ul>
+  </section>
 </main>
 <script src="app.js"></script>
 </body>

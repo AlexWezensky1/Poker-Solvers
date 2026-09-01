@@ -16,6 +16,13 @@ const playersEl = document.getElementById("players");
 const deckEl = document.getElementById("deck");
 const statusEl = document.getElementById("status");
 const clearBtn = document.getElementById("clear");
+const speedEl = document.getElementById("speed");
+
+// Fast samples a fixed 250,000 runouts whatever the table looks like; precise
+// walks every one of them. Sampling lands within about 0.1% of the true number
+// and takes about a second, where an exact opening deal can take ten.
+const FAST_TRIALS = 250000;
+let speed = "fast";
 
 // Every slot on the table, in the order they are laid out. The order deck
 // clicks travel in is a different thing entirely -- see fillOrder below.
@@ -297,7 +304,7 @@ function render(seats, results) {
 
     const pct = document.createElement("div");
     pct.className = "equity-pct";
-    pct.textContent = result.equity.toFixed(2) + "%";
+    pct.textContent = result.equity.toFixed(1) + "%";
 
     const bar = document.createElement("div");
     bar.className = "bar";
@@ -311,7 +318,7 @@ function render(seats, results) {
 
     const scoop = document.createElement("div");
     scoop.className = "breakdown";
-    scoop.textContent = "Scoop " + result.scoop.toFixed(2) + "%";
+    scoop.textContent = "Scoop " + result.scoop.toFixed(1) + "%";
 
     const rest = document.createElement("div");
     rest.className = "breakdown";
@@ -367,11 +374,12 @@ async function run(input) {
     const response = await fetch("/hmrds/api/equity", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // Trials and mode are left off; the server picks its own defaults.
       body: JSON.stringify({
         hands: input.seats.map((s) => s.held),
         discards: input.seats.map((s) => s.discarded),
         board: input.board.join(""),
+        mode: speed === "fast" ? "monte-carlo" : "exact",
+        trials: FAST_TRIALS,
       }),
     });
     const payload = await response.json();
@@ -403,6 +411,15 @@ buildBoard();
 for (let seat = 0; seat < MAX_PLAYERS; seat++) buildSeat(seat);
 buildDeck();
 buildFillOrder();
+
+for (const button of speedEl.querySelectorAll(".seg")) {
+  button.addEventListener("click", () => {
+    if (speed === button.dataset.speed) return;
+    speed = button.dataset.speed;
+    speedEl.querySelectorAll(".seg").forEach((b) => b.classList.toggle("on", b === button));
+    autoCalculate();  // the table has not changed, but the answer will
+  });
+}
 
 clearBtn.addEventListener("click", clearAll);
 setStatus("");

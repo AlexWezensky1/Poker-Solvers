@@ -435,7 +435,8 @@ def equity(hands, board=(), discards=None, trials=DEFAULT_TRIALS, seed=None,
     if len(board) == BOARD_SIZE and not hidden:
         masks, tables = build_profiles(known)
         boards = _cumulative(known_masks)
-        detail = [describe(masks, tables, boards, seat) for seat in range(len(hands))]
+        detail = [describe(masks, tables, boards, seat, known[seat])
+                  for seat in range(len(hands))]
 
     report = EquityReport(board=board, mode=mode, trials=total)
     for i in range(len(hands)):

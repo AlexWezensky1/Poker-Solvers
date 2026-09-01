@@ -291,6 +291,17 @@ def test_describe_reads_a_finished_hand():
     assert report.hands[1].detail.startswith("J ")
 
 
+def test_describe_lists_every_card_a_pair_included():
+    """A rank mask holds one bit per rank, so a pair used to read as one card
+    and the listing came up short of the total printed beside it."""
+    hands = [parse_cards("KsKhQsJdJs"), parse_cards("3s2s4s5sJh")]
+    board = parse_cards("KdQdTs9s7s8s8h7h7d3h")
+    report = equity(hands, board)
+    # Both jacks survive, and jacks are worth ten apiece.
+    assert report.hands[0].detail == "J J (20)"
+    assert report.hands[1].detail == "J 5 4 2 (21)"
+
+
 def test_discards_are_just_part_of_the_hand():
     """Naming a hand as held plus discarded settles exactly as the whole hand."""
     board = parse_cards("2s2c3s3c5s5c7cTh9h8h")
