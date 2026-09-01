@@ -105,6 +105,12 @@ function makeCardInput() {
   input.spellcheck = false;
   setCard(input, "");
 
+  // Safari on iOS zooms the page in on a focused control whose text is under
+  // 16px, and a card slot is well under. Blocking the default on mousedown
+  // stops the tap taking focus, which is what it was zooming to; the click
+  // still lands, and Tab still focuses the slot the ordinary way.
+  input.addEventListener("mousedown", (event) => event.preventDefault());
+
   // Clicking a slot that holds a card sends that card back to the deck. Either
   // way the slot is left armed, so the next deck click deals into it.
   input.addEventListener("click", () => {

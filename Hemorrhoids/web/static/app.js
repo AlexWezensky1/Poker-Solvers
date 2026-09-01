@@ -150,6 +150,12 @@ function makeCardInput() {
   input.setAttribute("aria-label", "card");
   setCard(input, "");
 
+  // Safari on iOS zooms the page in on a focused control whose text is under
+  // 16px, and a card slot is 11. Blocking the default on mousedown stops the
+  // tap taking focus, which is what it was zooming to; the click still lands,
+  // and Tab still focuses the slot the ordinary way.
+  input.addEventListener("mousedown", (event) => event.preventDefault());
+
   // Clicking a slot that holds a card sends that card back to the deck. Either
   // way the slot is left armed, so the next deck click deals into it.
   input.addEventListener("click", () => {
@@ -195,8 +201,17 @@ function buildSeat(seat) {
   box.disabled = seat === 0;
   box.addEventListener("change", () => {
     buildFillOrder();
-    refresh();
-    if (!inHand(seat)) setActive(fillOrder[0]);
+    refresh();  // enables or disables the slots, so it has to run first
+    if (inHand(seat)) {
+      // Checking a seat in is asking to deal it, so the next card goes there
+      // rather than wherever the run had got to.
+      const slots = players[seat].inputs;
+      setActive(slots.find((slot) => !cardOf(slot)) || slots[0]);
+    } else {
+      // Back to the front of the order, but to a slot that is actually free --
+      // arming a full one would mean the next card landed on top of it.
+      setActive(nextEmpty(-1) || fillOrder[0]);
+    }
   });
   const name = document.createElement("span");
   name.textContent = "Hand " + (seat + 1);
