@@ -339,13 +339,51 @@ def test_unknown_cards_cannot_be_ones_the_board_already_matched():
         report.hands[0].equity_pct, expected)
 
 
-def test_exact_refuses_unknown_cards():
-    try:
-        equity([parse_cards("AsKsQsJsTs"), parse_cards("2h3h")], (), mode="exact")
-    except ValueError as exc:
-        assert "monte-carlo" in str(exc), exc
-    else:
-        raise AssertionError("exact should not accept an unknown card")
+def test_exact_walks_unknown_cards_when_few_enough_ways_to_deal_them():
+    """Every filling is a table with all hands named, so it is the ordinary
+    walk. Suits are what make it affordable: they collapse the 46,376 ways to
+    deal four unknown cards down to 486 distinct rank multisets."""
+    board = parse_cards("KdQdTs9s")
+    hands = [parse_cards("QsQhJdJsTh"), ()]
+    discards = [(), parse_cards("Kc")]
+
+    walked = equity(hands, board, discards=discards, mode="exact")
+    assert walked.mode == "exact", walked.mode
+
+    sampled = equity(hands, board, discards=discards, mode="monte-carlo",
+                     trials=200_000, seed=7)
+    for exact_hand, sampled_hand in zip(walked.hands, sampled.hands):
+        assert abs(exact_hand.equity_pct - sampled_hand.equity_pct) < 0.5
+    assert abs(sum(h.equity_pct for h in walked.hands) - 100) < 1e-9
+
+
+def test_exact_samples_when_there_are_too_many_ways_to_deal_the_unknown():
+    """Nothing to walk them with, so it answers as monte-carlo rather than
+    refusing the question outright."""
+    report = equity([parse_cards("AsKsQsJsTs"), parse_cards("2h3h")], (),
+                    mode="exact", trials=5_000, seed=1)
+    assert report.mode == "monte-carlo", report.mode
+
+
+def test_walking_the_unknown_agrees_with_naming_it():
+    """One seat missing one card is five known tables averaged; the walk has to
+    land where working them out by hand does."""
+    board = parse_cards("KdQdTs9s")
+    known = parse_cards("QsQhJdJsTh")
+    partial = parse_cards("8c7c6c5c")
+
+    walked = equity([known, partial], board, mode="exact")
+    assert walked.mode == "exact", walked.mode
+
+    # Every card the fifth could be, weighted evenly -- they are all one card.
+    dead = set(board) | set(known) | set(partial)
+    pool = [c for c in FULL_DECK
+            if c not in dead and not RANK_BIT[c] & rank_mask(board)]
+    by_hand = [equity([known, list(partial) + [card]], board, mode="exact")
+               for card in pool]
+    expected = sum(r.hands[0].equity_pct for r in by_hand) / len(by_hand)
+    assert abs(walked.hands[0].equity_pct - expected) < 1e-9, (
+        walked.hands[0].equity_pct, expected)
 
 
 def test_rejects_bad_hands():

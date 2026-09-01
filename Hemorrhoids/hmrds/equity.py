@@ -34,6 +34,12 @@ DEFAULT_TRIALS = 250_000
 #: Walk the exact DP while its estimated size stays under this many steps.
 DEFAULT_EXACT_BUDGET = 5_000_000
 
+#: Cards nobody has named are walked too, one walk per way of filling them in,
+#: so the wait is that many times a single walk. A thousand keeps the worst case
+#: in the ten seconds an exact opening deal already costs; past that there are
+#: too many ways to deal the unknown for walking them to beat sampling them.
+MAX_HIDDEN_FILLINGS = 1_000
+
 
 @dataclass
 class HandEquity:
@@ -345,6 +351,105 @@ def _monte_carlo(known, unknown, deck, hole_pool, needs, known_masks, trials, se
     return pot, scoops, outs, keeps, highs, lows
 
 
+def _rank_multisets(avail, size):
+    """Every way to pick ``size`` cards from ``avail`` counting ranks only.
+
+    ``avail`` maps rank -> how many of it are left. Yields ``(picks, ways)``
+    where ``picks`` is a tuple of ``(rank, count)`` and ``ways`` is how many
+    card combinations that stands for. Suits are invisible to every rule, so
+    one entry here covers all of them.
+    """
+    ranks = sorted(avail)
+
+    def walk(i, left, picked, ways):
+        if left == 0:
+            yield picked, ways
+            return
+        if i == len(ranks):
+            return
+        rank = ranks[i]
+        for take in range(min(avail[rank], left) + 1):
+            yield from walk(i + 1, left - take,
+                            picked + ((rank, take),) if take else picked,
+                            ways * comb(avail[rank], take))
+
+    yield from walk(0, size, (), 1)
+
+
+def _hidden_fillings(pool, hidden):
+    """Every way the unnamed cards could have been dealt, by rank.
+
+    ``pool`` maps rank -> how many of it could still be in somebody's hand, and
+    ``hidden`` is how many cards each seat is missing. Seats are filled in turn
+    out of what the ones before them left, so the weights come out right.
+    """
+    seats = [seat for seat, count in enumerate(hidden) if count]
+
+    def walk(i, avail, filling, ways):
+        if i == len(seats):
+            yield filling, ways
+            return
+        seat = seats[i]
+        for picks, count in _rank_multisets(avail, hidden[seat]):
+            left = dict(avail)
+            for rank, take in picks:
+                left[rank] -= take
+                if not left[rank]:
+                    del left[rank]
+            yield from walk(i + 1, left, filling + ((seat, picks),), ways * count)
+
+    yield from walk(0, pool, (), 1)
+
+
+def _count_fillings(pool, hidden, cap):
+    """How many fillings there are, giving up once it is clearly too many."""
+    total = 0
+    for _ in _hidden_fillings(pool, hidden):
+        total += 1
+        if total > cap:
+            break
+    return total
+
+
+def _exact_over_hidden(known_ranks, hidden, pool, deck_ranks, needs, known_masks):
+    """Walk every runout for every way the unnamed cards could have been dealt.
+
+    Each filling is a table with every hand named, so it is the ordinary walk;
+    the answers are averaged over the fillings, weighted by how many card deals
+    each one stands for.
+    """
+    n = len(known_ranks)
+    tally = [[0.0] * n for _ in range(6)]
+    dealt = sum(hidden)
+    spare = sum(deck_ranks.values()) - dealt
+    total = 0
+
+    for filling, ways in _hidden_fillings(pool, hidden):
+        seats = [list(ranks) for ranks in known_ranks]
+        left = dict(deck_ranks)
+        for seat, picks in filling:
+            for rank, take in picks:
+                seats[seat].extend([rank] * take)
+                left[rank] -= take
+
+        masks, tables = [], []
+        for ranks in seats:
+            mask, table = profile_for_ranks(tuple(sorted(ranks)))
+            masks.append(mask)
+            tables.append(table)
+
+        live = sorted({rank for ranks in seats for rank in ranks})
+        avail = tuple(left.get(rank, 0) for rank in live)
+        row = _exact(masks, tables, avail, tuple(1 << rank for rank in live),
+                     spare - sum(avail), needs, known_masks)
+        for k in range(6):
+            for seat in range(n):
+                tally[k][seat] += ways * row[k][seat]
+        total += ways
+
+    return tuple(tally) + (float(total),)
+
+
 def _exact_cost(live, unknown, needs):
     """Rough size of the exact walk: states reachable times branching per street."""
     if unknown == 0:
@@ -402,17 +507,47 @@ def equity(hands, board=(), discards=None, trials=DEFAULT_TRIALS, seed=None,
                          % (len(hole_pool), hidden))
 
     live = sorted({card >> 2 for cards in known for card in cards})
+
+    # Unnamed cards can be walked as well as sampled: every filling is a table
+    # with all hands named, so it is the ordinary walk, and suits collapse the
+    # fillings from card combinations down to rank multisets -- ninety five
+    # times fewer for a seat missing four. It is still one walk apiece, so it
+    # only pays while there are few enough of them.
+    fillings = 0
+    if hidden:
+        pool_ranks = {}
+        for card in hole_pool:
+            rank = card >> 2
+            pool_ranks[rank] = pool_ranks.get(rank, 0) + 1
+        per_walk = _exact_cost(min(13, len(live) + hidden), to_come, needs)
+        # Forced, the walk is worth a wait; chosen by auto it has to stay quick.
+        cap = MAX_HIDDEN_FILLINGS if mode == "exact" else min(
+            MAX_HIDDEN_FILLINGS, exact_budget // max(per_walk, 1))
+        fillings = _count_fillings(pool_ranks, unknown, cap)
+        walkable = fillings <= cap and per_walk <= exact_budget
+    else:
+        walkable = False
+
     if mode == "auto":
         if hidden:
-            mode = "monte-carlo"
+            mode = "exact" if walkable else "monte-carlo"
         else:
             affordable = _exact_cost(len(live), to_come, needs) <= exact_budget
             mode = "exact" if affordable else "monte-carlo"
-    elif mode == "exact" and hidden:
-        raise ValueError("%d card%s unknown, which only monte-carlo can deal"
-                         % (hidden, " is" if hidden == 1 else "s are"))
+    elif mode == "exact" and hidden and not walkable:
+        # Too many ways to deal the unknown to walk them all; say so by
+        # answering as monte-carlo rather than refusing outright.
+        mode = "monte-carlo"
 
-    if mode == "exact":
+    if mode == "exact" and hidden:
+        deck_ranks = {}
+        for card in deck:
+            rank = card >> 2
+            deck_ranks[rank] = deck_ranks.get(rank, 0) + 1
+        known_ranks = [sorted(card >> 2 for card in cards) for cards in known]
+        pot, scoops, outs, keeps, highs, lows, total = _exact_over_hidden(
+            known_ranks, unknown, pool_ranks, deck_ranks, needs, known_masks)
+    elif mode == "exact":
         masks, tables = build_profiles(known)
         avail = tuple(sum(1 for c in deck if c >> 2 == rank) for rank in live)
         bits = tuple(1 << rank for rank in live)

@@ -74,6 +74,19 @@ function setActive(input) {
   if (input) input.focus();
 }
 
+function inHand(seat) {
+  return players[seat].box.checked;
+}
+
+// Board slots plus the seats still in the pot: what is actually on the table.
+function liveInputs() {
+  const live = [...boardInputs];
+  players.forEach((player, seat) => {
+    if (inHand(seat)) live.push(...player.inputs);
+  });
+  return live;
+}
+
 // The order a run of deck clicks fills the table in: your own hand, then the
 // four community cards that open the game, then the rest of the seats, and the
 // later streets last. It is not how the cards are dealt -- everybody is dealt
@@ -82,9 +95,12 @@ function setActive(input) {
 const fillOrder = [];
 
 function buildFillOrder() {
+  fillOrder.length = 0;
   fillOrder.push(...players[0].inputs);
   fillOrder.push(...boardInputs.slice(0, STREETS[0]));
-  for (const player of players.slice(1)) fillOrder.push(...player.inputs);
+  for (let seat = 1; seat < players.length; seat++) {
+    if (inHand(seat)) fillOrder.push(...players[seat].inputs);
+  }
   fillOrder.push(...boardInputs.slice(STREETS[0]));
 }
 
@@ -164,9 +180,22 @@ function buildSeat(seat) {
   const row = document.createElement("div");
   row.className = "player";
 
-  const number = document.createElement("div");
+  // Seat 1 is whoever is asking, so it is always in and its box is fixed on.
+  const number = document.createElement("label");
   number.className = "seat";
-  number.textContent = "Hand " + (seat + 1);
+  const box = document.createElement("input");
+  box.type = "checkbox";
+  box.className = "in";
+  box.checked = seat < 2;
+  box.disabled = seat === 0;
+  box.addEventListener("change", () => {
+    buildFillOrder();
+    refresh();
+    if (!inHand(seat)) setActive(fillOrder[0]);
+  });
+  const name = document.createElement("span");
+  name.textContent = "Hand " + (seat + 1);
+  number.append(box, name);
 
   const holecards = document.createElement("div");
   holecards.className = "holecards";
@@ -183,7 +212,7 @@ function buildSeat(seat) {
 
   row.append(number, holecards, note, result);
   playersEl.appendChild(row);
-  players.push({ row, inputs, note, result });
+  players.push({ row, inputs, note, result, box });
 }
 
 function buildDeck() {
@@ -215,8 +244,16 @@ function buildDeck() {
 // are already on the table, and strikes through the hand cards the board has
 // already discarded.
 function refresh() {
+  // A seat nobody has checked is not in the pot, so its slots are shut and the
+  // cards sitting in them go back to the deck for everybody else to use.
+  players.forEach((player, seat) => {
+    const out = !inHand(seat);
+    player.row.classList.toggle("out", out);
+    player.inputs.forEach((input) => { input.disabled = out; });
+  });
+
   const seen = new Map();
-  allInputs.forEach((input) => {
+  liveInputs().forEach((input) => {
     const card = cardOf(input);
     if (card) seen.set(card, (seen.get(card) || 0) + 1);
   });
@@ -275,20 +312,26 @@ function collect() {
 
   const seats = [];
   players.forEach((player, seat) => {
+    if (!inHand(seat)) return;
     const cards = player.inputs.map(cardOf).filter(Boolean);
-    if (!cards.length) return;
     const discarded = cards.filter((card) => turned.has(card[0]));
     const held = cards.filter((card) => !turned.has(card[0]));
-    // A seat counts once it is fully dealt, or once anything of its is face up
-    // -- a player you can only read by their discards is still a player. A seat
-    // part way through being typed is neither, so it waits.
-    if (cards.length < HAND_SIZE && !discarded.length) {
-      throw new Error("Hand " + (seat + 1) + " is still being dealt.");
-    }
+    // Whatever a checked seat has not been given is simply unknown, and the
+    // solver deals it at random out of the cards the board has not turned --
+    // which is to say it is taken to have discarded nothing.
     seats.push({ seat, held: held.join(""), discarded: discarded.join("") });
   });
 
-  if (seats.length < 2) throw new Error("Enter at least two hands.");
+  if (seats.length < 2) throw new Error("Check at least two hands.");
+
+  // The opening community cards are enough to solve from, however little is
+  // known about the seats. Short of them, wait until every hand in the pot is
+  // dealt -- an empty table has nothing to say.
+  const allDealt = seats.every(
+    (s) => (s.held.length + s.discarded.length) / 2 === HAND_SIZE);
+  if (board.length < STREETS[0] && !allDealt) {
+    throw new Error("Deal the first " + STREETS[0] + " community cards.");
+  }
 
   const used = [...board, ...seats.flatMap((s) => [s.held, s.discarded].join("").match(/../g) || [])];
   const duplicate = used.find((card, i) => used.indexOf(card) !== i);
@@ -373,15 +416,11 @@ async function run(input) {
   const ticket = ++latest;
   setStatus("Calculating…");
 
-  // The walk cannot deal cards nobody has named: every way of filling them in
-  // is a different set of live ranks, so each one would need its own walk and
-  // none of the work carries over. Precise samples those tables instead, and
-  // samples them four times as hard as Fast does -- error falls with the root
-  // of the trial count, so that halves it.
-  const unknown = input.seats.some(
-    (seat) => (seat.held.length + seat.discarded.length) / 2 < HAND_SIZE);
+  // Precise always asks for the walk. Cards nobody has named can be walked
+  // too -- one walk per way of filling them in, and suits collapse those to
+  // rank multisets -- but only while there are few enough of them, so the
+  // server is what decides and the answer says which it did.
   const precise = speed === "precise";
-  const mode = precise ? (unknown ? "monte-carlo" : "exact") : "auto";
   try {
     const response = await fetch("/hmrds/api/equity", {
       method: "POST",
@@ -390,7 +429,7 @@ async function run(input) {
         hands: input.seats.map((s) => s.held),
         discards: input.seats.map((s) => s.discarded),
         board: input.board.join(""),
-        mode: mode,
+        mode: precise ? "exact" : "auto",
         trials: precise ? PRECISE_TRIALS : FAST_TRIALS,
       }),
     });
@@ -403,7 +442,7 @@ async function run(input) {
       ? "exact"
       : Math.round(payload.trials).toLocaleString() + " simulations";
     // Say why Precise sampled, so the button does not look like it was ignored.
-    const why = precise && unknown ? "unknown cards, " : "";
+    const why = precise && payload.mode !== "exact" ? "too many unknowns, " : "";
     setStatus(why + how + " in " + payload.seconds + " seconds");
   } catch (error) {
     if (ticket !== latest) return;
