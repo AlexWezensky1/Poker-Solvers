@@ -1,3 +1,25 @@
+/* TeX Gyre Heros, a Helvetica built from URW's Nimbus Sans and released under
+   the GUST Font License (fonts/GUST-FONT-LICENSE.txt). Naming Helvetica in a
+   font stack is not enough: Windows does not ship it, so the stack fell through
+   to Arial, whose a, t, C and R are drawn differently. Shipping the font is the
+   only way the page looks the same on every machine. */
+@font-face {
+  font-family: "TeX Gyre Heros";
+  src: url("fonts/texgyreheros-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "TeX Gyre Heros";
+  src: url("fonts/texgyreheros-bold.woff2") format("woff2");
+  /* The page asks for 600 in places; spanning the range stops the browser
+     smearing a synthetic bold over the real one. */
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --bg: #10161c;
   --panel: #182029;
@@ -12,7 +34,7 @@
   --heart: #ff6b6b;
   --diamond: #57a6ff;
   --club: #4fd18b;
-  --font: Helvetica, "Helvetica Neue", Arial, sans-serif;
+  --font: "TeX Gyre Heros", Helvetica, "Helvetica Neue", Arial, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -27,7 +49,20 @@ body {
 
 main { max-width: 768px; margin: 0 auto; }
 
-header { margin-bottom: 22px; }
+header {
+  display: flex; align-items: baseline;
+  justify-content: space-between; gap: 16px;
+  margin-bottom: 22px;
+}
+/* The other solver and the way back, sitting out at the end of the title line
+   so they stay clear of the table below. */
+.elsewhere { display: flex; gap: 14px; flex-shrink: 0; }
+.elsewhere a {
+  color: var(--muted); font-size: 11px; text-decoration: none;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.elsewhere a:hover { color: var(--accent); }
+
 h1 { margin: 0; font-size: 21px; letter-spacing: -0.01em; }
 h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 

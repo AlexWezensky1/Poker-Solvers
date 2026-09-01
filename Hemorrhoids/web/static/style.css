@@ -49,7 +49,20 @@ body {
 
 main { max-width: 768px; margin: 0 auto; }
 
-header { margin-bottom: 18px; }
+header {
+  display: flex; align-items: baseline;
+  justify-content: space-between; gap: 16px;
+  margin-bottom: 18px;
+}
+/* The other solver and the way back, sitting out at the end of the title line
+   so they stay clear of the table below. */
+.elsewhere { display: flex; gap: 14px; flex-shrink: 0; }
+.elsewhere a {
+  color: var(--muted); font-size: 11px; text-decoration: none;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.elsewhere a:hover { color: var(--accent); }
+
 h1 { margin: 0; font-size: 21px; letter-spacing: -0.01em; }
 
 .panel {
