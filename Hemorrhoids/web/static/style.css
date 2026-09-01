@@ -222,6 +222,10 @@ button.ghost:hover { background: var(--panel-2); color: var(--text); }
    the half that owned it was not the half selected. */
 .seg:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
 .seg:hover { background: var(--panel-2); color: var(--text); }
+/* Clear sits directly under the pair, so it is built to the same metrics --
+   otherwise the two controls stack at different heights and the column looks
+   assembled from spare parts. */
+#clear { padding: 8px 12px; font-size: 11px; }
 .seg.on {
   background: rgba(63, 178, 127, 0.12);
   border-color: var(--accent-dim);
@@ -258,4 +262,36 @@ button.ghost:hover { background: var(--panel-2); color: var(--text); }
   .pip { font-size: 9px; }
   .board .card { width: 34px; height: 42px; font-size: 14px; }
   .board .slot.street { margin-left: 8px; }
+}
+
+/* Phone width. A seat holds five cards, so at the sizes above only one column
+   of them fits and the table runs on for eight screens. Everything the seat is
+   built from comes down together -- cards, gaps, padding -- until two columns
+   fit side by side, which is what the grid is asked for here. */
+@media (max-width: 620px) {
+  .players { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .player { padding: 8px 6px; gap: 5px; }
+  .card { width: 26px; height: 33px; font-size: 12px; border-radius: 5px; }
+  .holecards { gap: 4px; }
+  .seat { font-size: 10px; gap: 4px; }
+  .seat input { width: 11px; height: 11px; }
+  .equity-pct { font-size: 15px; }
+  .breakdown { font-size: 10px; }
+  .note { font-size: 9px; }
+
+  /* The board keeps a size of its own: it is one row of ten, not five, so it
+     is the page width that sets it rather than the seat beside it. */
+  .board-panel { padding: 14px 8px; }
+  .board { gap: 4px; }
+  .board .card { width: 28px; height: 35px; font-size: 12px; }
+  .board .slot.street { margin-left: 6px; }
+}
+
+@media (max-width: 400px) {
+  body { padding: 20px 10px 40px; }
+  .deck { gap: 3px; }
+  .deck-card { font-size: 9px; padding: 5px 0; }
+  .pip { font-size: 8px; }
+  .board .card { width: 25px; height: 31px; font-size: 11px; }
+  .card { width: 24px; height: 30px; font-size: 11px; }
 }

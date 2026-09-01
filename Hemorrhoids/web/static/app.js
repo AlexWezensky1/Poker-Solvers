@@ -67,11 +67,16 @@ function turnedRanks() {
 /* ---------- the slot the deck deals into ---------- */
 
 function setActive(input) {
-  if (active !== input) {
-    active = input;
-    allInputs.forEach((slot) => slot.classList.toggle("active", slot === active));
-  }
-  if (input) input.focus();
+  if (active === input) return;
+  active = input;
+  allInputs.forEach((slot) => slot.classList.toggle("active", slot === active));
+  // Deliberately no focus() here. Arming a slot is a paint job -- the outline
+  // says where the next card lands -- and moving the caret to it made the
+  // browser drag that slot into view, so dealing from the deck scrolled the
+  // deck off the screen. preventScroll would cover it on desktop, but Safari
+  // on iOS ignores that, and the slots are readOnly so focus earns nothing.
+  // Tapping a slot still focuses it the ordinary way, and the focus listener
+  // below picks that up, which is what keeps Tab working.
 }
 
 function inHand(seat) {
@@ -475,5 +480,8 @@ for (const button of speedEl.querySelectorAll(".seg")) {
 }
 
 clearBtn.addEventListener("click", clearAll);
+// Nothing has happened yet, but the seats nobody has checked still have to be
+// shut before the first click rather than after it.
+refresh();
 setStatus("");
 setActive(fillOrder[0]);

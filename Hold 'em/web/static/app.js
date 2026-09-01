@@ -54,11 +54,15 @@ function setCard(input, card) {
 /* ---------- the slot the deck deals into ---------- */
 
 function setActive(input) {
-  if (active !== input) {
-    active = input;
-    allInputs.forEach((slot) => slot.classList.toggle("active", slot === active));
-  }
-  if (input) input.focus();
+  if (active === input) return;
+  active = input;
+  allInputs.forEach((slot) => slot.classList.toggle("active", slot === active));
+  // Deliberately no focus() here. Arming a slot is a paint job -- the outline
+  // says where the next card lands -- and moving the caret to it made the
+  // browser drag that slot into view, so dealing from the deck scrolled the
+  // deck off the screen. The slots are readOnly, so focus earns nothing;
+  // tapping one still focuses it the ordinary way, which is what keeps Tab
+  // working through the focus listener below.
 }
 
 // The next empty slot after the given position in dealing order, wrapping
