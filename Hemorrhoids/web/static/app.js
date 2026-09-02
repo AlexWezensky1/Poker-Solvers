@@ -79,7 +79,14 @@ function setActive(input) {
   // below picks that up, which is what keeps Tab working.
 }
 
+// In the pot: dealt in, and still in it.
 function inHand(seat) {
+  return players[seat].box.checked && !players[seat].folded;
+}
+
+// Dealt in at all. A folded hand still holds its cards -- they are out of the
+// deck for everybody -- which is what separates folding from never playing.
+function isDealt(seat) {
   return players[seat].box.checked;
 }
 
@@ -87,7 +94,7 @@ function inHand(seat) {
 function liveInputs() {
   const live = [...boardInputs];
   players.forEach((player, seat) => {
-    if (inHand(seat)) live.push(...player.inputs);
+    if (isDealt(seat)) live.push(...player.inputs);
   });
   return live;
 }
@@ -192,6 +199,8 @@ function buildSeat(seat) {
   row.className = "player";
 
   // Seat 1 is whoever is asking, so it is always in and its box is fixed on.
+  const header = document.createElement("div");
+  header.className = "seat-row";
   const number = document.createElement("label");
   number.className = "seat";
   const box = document.createElement("input");
@@ -217,6 +226,24 @@ function buildSeat(seat) {
   name.textContent = "Hand " + (seat + 1);
   number.append(box, name);
 
+  // Folding is not the same as never being dealt in. A folded hand takes no
+  // share of the pot, but the cards it was holding are gone from the deck --
+  // nobody else can be dealt them, and that changes everybody's equity.
+  const fold = document.createElement("button");
+  fold.type = "button";
+  fold.className = "fold";
+  fold.textContent = "Fold";
+  fold.addEventListener("click", () => {
+    const seatState = players[seat];
+    seatState.folded = !seatState.folded;
+    fold.textContent = seatState.folded ? "Folded" : "Fold";
+    fold.classList.toggle("on", seatState.folded);
+    buildFillOrder();
+    refresh();
+    if (seatState.folded) setActive(nextEmpty(-1) || fillOrder[0]);
+  });
+  header.append(number, fold);
+
   const holecards = document.createElement("div");
   holecards.className = "holecards";
   const inputs = [];
@@ -230,9 +257,9 @@ function buildSeat(seat) {
   const result = document.createElement("div");
   result.className = "result empty";
 
-  row.append(number, holecards, note, result);
+  row.append(header, holecards, note, result);
   playersEl.appendChild(row);
-  players.push({ row, inputs, note, result, box });
+  players.push({ row, inputs, note, result, box, fold, folded: false });
 }
 
 function buildDeck() {
@@ -267,9 +294,12 @@ function refresh() {
   // A seat nobody has checked is not in the pot, so its slots are shut and the
   // cards sitting in them go back to the deck for everybody else to use.
   players.forEach((player, seat) => {
-    const out = !inHand(seat);
+    const out = !isDealt(seat);
     player.row.classList.toggle("out", out);
-    player.inputs.forEach((input) => { input.disabled = out; });
+    player.row.classList.toggle("folded", player.folded && !out);
+    // A folded hand's cards stay where they are and stay out of the deck, so
+    // its slots are shut without being emptied.
+    player.inputs.forEach((input) => { input.disabled = out || player.folded; });
   });
 
   const seen = new Map();
@@ -331,8 +361,14 @@ function collect() {
   const turned = new Set(board.map((card) => card[0]));
 
   const seats = [];
+  const dead = [];
   players.forEach((player, seat) => {
-    if (!inHand(seat)) return;
+    if (!inHand(seat)) {
+      // A folded hand is out of the pot but its cards are out of the deck, so
+      // they travel as dead: not scored, and not dealt to anybody else.
+      if (isDealt(seat)) dead.push(...player.inputs.map(cardOf).filter(Boolean));
+      return;
+    }
     const cards = player.inputs.map(cardOf).filter(Boolean);
     const discarded = cards.filter((card) => turned.has(card[0]));
     const held = cards.filter((card) => !turned.has(card[0]));
@@ -353,11 +389,12 @@ function collect() {
     throw new Error("Deal the first " + STREETS[0] + " community cards.");
   }
 
-  const used = [...board, ...seats.flatMap((s) => [s.held, s.discarded].join("").match(/../g) || [])];
+  const used = [...board, ...dead,
+                ...seats.flatMap((s) => [s.held, s.discarded].join("").match(/../g) || [])];
   const duplicate = used.find((card, i) => used.indexOf(card) !== i);
   if (duplicate) throw new Error(duplicate + " is used more than once.");
 
-  return { board, seats };
+  return { board, seats, dead };
 }
 
 function render(seats, results) {
@@ -449,6 +486,7 @@ async function run(input) {
         hands: input.seats.map((s) => s.held),
         discards: input.seats.map((s) => s.discarded),
         board: input.board.join(""),
+        dead: input.dead.join(""),
         mode: precise ? "exact" : "auto",
         trials: precise ? PRECISE_TRIALS : FAST_TRIALS,
       }),
@@ -472,6 +510,12 @@ async function run(input) {
 }
 
 function clearAll() {
+  players.forEach((player) => {
+    player.folded = false;
+    player.fold.textContent = "Fold";
+    player.fold.classList.remove("on");
+  });
+  buildFillOrder();
   allInputs.forEach((input) => setCard(input, ""));
   refresh();
   setStatus("");

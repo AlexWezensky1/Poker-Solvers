@@ -37,6 +37,11 @@ class EquityRequest(BaseModel):
                     "Whatever hands and discards leave unnamed is dealt at random.",
     )
     board: str = Field("", description="0-10 community cards in dealing order")
+    dead: str = Field(
+        "",
+        description="Cards out of the deck but belonging to nobody still in the "
+                    "pot -- a folded hand's. Not scored, but not dealt either.",
+    )
     trials: int = Field(DEFAULT_TRIALS, ge=1, le=MAX_TRIALS)
     mode: Literal["auto", "exact", "monte-carlo"] = Field(
         "auto", description="'auto' samples instead of walking when the runouts are too wide"
@@ -84,9 +89,10 @@ def calculate(request: EquityRequest):
             for i in range(len(hands))
         ]
         board = parse_cards(request.board)
+        dead = parse_cards(request.dead)
 
         started = perf_counter()
-        report = equity(hands, board, discards=discards,
+        report = equity(hands, board, discards=discards, dead=dead,
                         trials=request.trials, mode=request.mode)
         elapsed = perf_counter() - started
     except ValueError as exc:

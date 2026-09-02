@@ -117,7 +117,7 @@ class EquityReport:
         return self.mode == "exact"
 
 
-def _validate(hands, board, discards):
+def _validate(hands, board, discards, dead):
     if len(hands) < 2:
         raise ValueError("need at least 2 hands to compare")
     if len(hands) > MAX_PLAYERS:
@@ -143,7 +143,7 @@ def _validate(hands, board, discards):
     for i, held in enumerate(hands):
         groups.append(("hand %d" % (i + 1), held))
         groups.append(("hand %d's discards" % (i + 1), discards[i]))
-    check_no_duplicates(groups + [("the board", board)])
+    check_no_duplicates(groups + [("the board", board), ("the folded hands", dead)])
 
 
 def _layout(board):
@@ -457,8 +457,8 @@ def _exact_cost(live, unknown, needs):
     return comb(unknown + live, live) * comb(max(needs) + live, live)
 
 
-def equity(hands, board=(), discards=None, trials=DEFAULT_TRIALS, seed=None,
-           mode="auto", exact_budget=DEFAULT_EXACT_BUDGET):
+def equity(hands, board=(), discards=None, dead=(), trials=DEFAULT_TRIALS,
+           seed=None, mode="auto", exact_budget=DEFAULT_EXACT_BUDGET):
     """Compute equity for two or more HMRDS hands.
 
     ``hands`` holds what each player is still known to be holding and
@@ -468,6 +468,11 @@ def equity(hands, board=(), discards=None, trials=DEFAULT_TRIALS, seed=None,
     out of the cards the board has not matched, since a matched card would be
     lying face up rather than hidden.  ``board`` holds 0-10 community cards in
     dealing order.
+
+    ``dead`` holds cards that are out of the deck without belonging to anyone
+    still in the pot -- a folded hand's.  They are not scored and they take no
+    share, but they cannot be dealt to anybody either, which is the whole point
+    of naming them: an unknown card is drawn from what is genuinely left.
 
     ``mode`` is ``"auto"`` (walk every runout when affordable, otherwise
     sample), ``"exact"`` to force the full walk, or ``"monte-carlo"`` to force
@@ -482,16 +487,17 @@ def equity(hands, board=(), discards=None, trials=DEFAULT_TRIALS, seed=None,
         if len(discards) != len(hands):
             raise ValueError("got %d hands but %d discard piles"
                              % (len(hands), len(discards)))
-    _validate(hands, board, discards)
+    dead = tuple(dead)
+    _validate(hands, board, discards, dead)
 
     known = [hands[i] + discards[i] for i in range(len(hands))]
     unknown = [HAND_SIZE - len(cards) for cards in known]
     hidden = sum(unknown)
 
-    dead = set(board)
+    gone = set(board) | set(dead)
     for cards in known:
-        dead.update(cards)
-    deck = [c for c in FULL_DECK if c not in dead]
+        gone.update(cards)
+    deck = [c for c in FULL_DECK if c not in gone]
 
     needs, known_masks = _layout(board)
     to_come = sum(needs)
