@@ -138,17 +138,27 @@ function makeCardInput() {
   return input;
 }
 
+//: The board laid out a row at a time: the flop, the turn under it, and then
+//: the river four to a row for as long as it ran.
+const BOARD_ROWS = [3, 1, 4, 2];
+
 function buildBoard() {
-  for (let i = 0; i < BOARD_SIZE; i++) {
-    const slot = document.createElement("div");
-    slot.className = "slot";
-    // The flop, then the turn, then the river running on from there.
-    if (i === 3 || i === 4) slot.classList.add("street");
-    const input = makeCardInput();
-    slot.appendChild(input);
-    boardEl.appendChild(slot);
-    boardInputs.push(input);
-  }
+  let dealt = 0;
+  BOARD_ROWS.forEach((size, index) => {
+    const row = document.createElement("div");
+    row.className = "board-row";
+    // The turn sits close under the flop; the river stands off from both.
+    if (index === 1) row.classList.add("tight");
+    for (let i = 0; i < size && dealt < BOARD_SIZE; i++, dealt++) {
+      const slot = document.createElement("div");
+      slot.className = "slot";
+      const input = makeCardInput();
+      slot.appendChild(input);
+      row.appendChild(slot);
+      boardInputs.push(input);
+    }
+    boardEl.appendChild(row);
+  });
 }
 
 // Which grid cell a seat occupies, counted clockwise from the top.

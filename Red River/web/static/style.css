@@ -120,22 +120,24 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
   background: radial-gradient(ellipse at center, rgba(63, 178, 127, 0.10), rgba(63, 178, 127, 0.02) 72%, transparent);
 }
 
-/* Five to a row. Ten slots in a line make the middle column of the ring twice
-   the width of the seats either side of it, so the standard board sits on top
-   and the cards the river ran on for sit under it. */
+/* A row a street. Ten slots in a line made the middle column of the ring twice
+   the width of the seats either side of it, so the board stacks instead: flop,
+   turn just under it, then the river four to a row. */
 .board {
   grid-area: 2 / 2;
   align-self: center;
-  justify-content: center;
-  display: grid;
-  grid-template-columns: repeat(5, auto);
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
+.board-row { display: flex; justify-content: center; gap: 8px; }
+/* The turn belongs with the flop, so it sits closer to it than to the river. */
+.board-row.tight { margin-top: -5px; }
 .board .card { width: 42px; height: 50px; font-size: 16px; border-radius: 6px; }
 .board .card::placeholder { font-size: 12px; }
 .slot { display: flex; flex-direction: column; align-items: center; }
 /* Turn and river stand off from the flop, so the streets read at a glance. */
-.board .slot.street { margin-left: 10px; }
 
 /* display: contents lets the seats sit directly in the table's grid, so there
    is no full size layer left to swallow clicks aimed at the board. */
@@ -279,8 +281,7 @@ button.ghost:hover { background: var(--panel-2); color: var(--text); }
   .board { gap: 1.11cqw; }
   .board .card { width: 5.83cqw; height: 6.94cqw; font-size: 2.22cqw; border-radius: 0.83cqw; }
   .board .card::placeholder { font-size: 1.67cqw; }
-  .board .slot.street { margin-left: 10px; }
-  .equity-pct { font-size: max(11px, 2.5cqw); }
+    .equity-pct { font-size: max(11px, 2.5cqw); }
   .breakdown { font-size: max(8px, 1.53cqw); }
   .bar { height: 0.69cqw; margin: 0.69cqw 0 0.56cqw; }
 }
