@@ -3,7 +3,11 @@
 const RANKS = "23456789TJQKA";
 const SUITS = "shdc";
 const MAX_PLAYERS = 8;
-const BOARD_SIZE = 5;
+// Flop, turn, then the river for as long as it keeps coming up red. Ten slots
+// covers all but about two boards in a hundred; the engine allows more, they
+// just cannot be typed in here.
+const STREETS = [3, 1];
+const BOARD_SIZE = 10;
 
 // The deck grid: one row per suit, ranks running high to low.
 const DECK_RANKS = "AKQJT98765432";
@@ -21,6 +25,13 @@ const playersEl = document.getElementById("players");
 const deckEl = document.getElementById("deck");
 const statusEl = document.getElementById("status");
 const clearBtn = document.getElementById("clear");
+const speedEl = document.getElementById("speed");
+
+// The river has no length of its own, so the ways a board can finish run into
+// the millions and the walk is only on offer once it has actually finished.
+const FAST_TRIALS = 250000;
+const PRECISE_TRIALS = 1000000;
+let speed = "fast";
 
 // allInputs is built in dealing order, so it doubles as the fill order:
 // hand 1, hand 2, flop, turn, river, hands 3-8.
@@ -131,6 +142,8 @@ function buildBoard() {
   for (let i = 0; i < BOARD_SIZE; i++) {
     const slot = document.createElement("div");
     slot.className = "slot";
+    // The flop, then the turn, then the river running on from there.
+    if (i === 3 || i === 4) slot.classList.add("street");
     const input = makeCardInput();
     slot.appendChild(input);
     boardEl.appendChild(slot);
@@ -357,13 +370,14 @@ async function run(input) {
   const ticket = ++latest;
   setStatus("Calculating…");
   try {
-    const response = await fetch("/holdem/api/equity", {
+    const response = await fetch("/redriver/api/equity", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // Trials and mode are left off; the server picks its own defaults.
       body: JSON.stringify({
         hands: input.hands.map((hand) => hand.text),
         board: input.board.join(""),
+        mode: speed === "fast" ? "auto" : "exact",
+        trials: speed === "precise" ? PRECISE_TRIALS : FAST_TRIALS,
       }),
     });
     const payload = await response.json();
@@ -372,8 +386,9 @@ async function run(input) {
 
     render(input.hands, payload.hands);
     const runs = payload.trials.toLocaleString();
-    const noun = payload.trials === 1 ? " runout" : " runouts";
-    setStatus(runs + noun + " in " + payload.seconds + " seconds");
+    const how = payload.mode !== "exact" ? " simulations"
+      : payload.trials === 1 ? " runout" : " runouts";
+    setStatus(runs + how + " in " + payload.seconds + " seconds");
   } catch (error) {
     if (ticket !== latest) return;
     clearResults();
@@ -394,6 +409,15 @@ buildSeat(1);
 buildBoard();
 for (let seat = 2; seat < MAX_PLAYERS; seat++) buildSeat(seat);
 buildDeck();
+
+for (const button of speedEl.querySelectorAll(".seg")) {
+  button.addEventListener("click", () => {
+    if (speed === button.dataset.speed) return;
+    speed = button.dataset.speed;
+    speedEl.querySelectorAll(".seg").forEach((b) => b.classList.toggle("on", b === button));
+    autoCalculate();
+  });
+}
 
 clearBtn.addEventListener("click", clearAll);
 setStatus("");

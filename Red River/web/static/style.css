@@ -130,7 +130,7 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
 .board .card::placeholder { font-size: 12px; }
 .slot { display: flex; flex-direction: column; align-items: center; }
 /* Turn and river stand off from the flop, so the streets read at a glance. */
-.board .slot:nth-child(4), .board .slot:nth-child(5) { margin-left: 8px; }
+.board .slot.street { margin-left: 10px; }
 
 /* display: contents lets the seats sit directly in the table's grid, so there
    is no full size layer left to swallow clicks aimed at the board. */
@@ -233,6 +233,26 @@ button:disabled { opacity: 0.55; cursor: default; }
 button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
 button.ghost:hover { background: var(--panel-2); color: var(--text); }
 
+.speed { display: flex; }
+.seg {
+  flex: 1 1 0;
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 8px 12px; font-size: 11px; font-weight: 600;
+}
+.seg:first-child { border-radius: 6px 0 0 6px; }
+.seg:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
+.seg:hover { background: var(--panel-2); color: var(--text); }
+#clear { padding: 8px 12px; font-size: 11px; }
+.seg.on {
+  background: rgba(63, 178, 127, 0.12);
+  border-color: var(--accent-dim);
+  color: var(--accent);
+  position: relative;
+  z-index: 1;
+}
+
 .status { margin: 0; color: var(--muted); font-size: 10px; min-height: 16px; }
 .status.error { color: var(--bad); }
 
@@ -251,7 +271,7 @@ button.ghost:hover { background: var(--panel-2); color: var(--text); }
   .board { gap: 1.11cqw; }
   .board .card { width: 5.83cqw; height: 6.94cqw; font-size: 2.22cqw; border-radius: 0.83cqw; }
   .board .card::placeholder { font-size: 1.67cqw; }
-  .board .slot:nth-child(4), .board .slot:nth-child(5) { margin-left: 1.11cqw; }
+  .board .slot.street { margin-left: 10px; }
   .equity-pct { font-size: max(11px, 2.5cqw); }
   .breakdown { font-size: max(8px, 1.53cqw); }
   .bar { height: 0.69cqw; margin: 0.69cqw 0 0.56cqw; }

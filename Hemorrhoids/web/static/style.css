@@ -56,7 +56,8 @@ header {
 }
 /* The other solver and the way back, sitting out at the end of the title line
    so they stay clear of the table below. */
-.elsewhere { display: flex; gap: 14px; flex-shrink: 0; }
+.elsewhere { display: flex; flex-wrap: wrap; gap: 10px 14px;
+  justify-content: flex-end; }
 .elsewhere a {
   color: var(--muted); font-size: 11px; text-decoration: none;
   text-transform: uppercase; letter-spacing: 0.06em;

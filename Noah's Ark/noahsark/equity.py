@@ -1,4 +1,4 @@
-"""Win / tie / equity calculation for Texas Hold'em.
+"""Win / tie / equity calculation for Noah's Ark.
 
 Runouts are enumerated exactly whenever that is cheap enough (everything from
 the flop onward, typically) and sampled with Monte Carlo otherwise.
@@ -13,10 +13,20 @@ from .cards import FULL_DECK, cards_str, check_no_duplicates
 from .evaluator import BUCKET_NAMES, CARD_KEY, bucket, describe, score_accumulator
 
 MAX_PLAYERS = 8
+
+#: Two community cards on each of the three streets.
+STREETS = (2, 2, 2)
+BOARD_SIZE = sum(STREETS)
 DEFAULT_TRIALS = 100_000
 
 #: Enumerate exactly while runouts x players stays under this many evaluations.
 DEFAULT_EXACT_BUDGET = 1_500_000
+
+#: Six community cards make C(48,6) runouts before the first street -- twelve
+#: million, over half a minute of walking. Asking for the walk outright still
+#: has to come back, so past this many evaluations it samples instead and the
+#: report says which it did.
+EXACT_CEILING = 5_000_000
 
 
 @dataclass
@@ -81,8 +91,9 @@ def _validate(hands, board):
     for i, hand in enumerate(hands):
         if len(hand) != 2:
             raise ValueError("hand %d has %d cards, expected 2" % (i + 1, len(hand)))
-    if len(board) > 5:
-        raise ValueError("the board holds at most 5 cards, got %d" % len(board))
+    if len(board) > BOARD_SIZE:
+        raise ValueError("the board holds at most %d cards, got %d"
+                         % (BOARD_SIZE, len(board)))
     groups = [("hand %d" % (i + 1), h) for i, h in enumerate(hands)]
     check_no_duplicates(groups + [("the board", board)])
 
@@ -140,7 +151,7 @@ def equity(hands, board=(), trials=DEFAULT_TRIALS, seed=None,
     """Compute equity for two or more Hold'em hands.
 
     ``hands`` is a sequence of two-card sequences and ``board`` holds 0-5
-    community cards, all as card ints from :mod:`holdem.cards`.
+    community cards, all as card ints from :mod:`noahsark.cards`.
 
     ``mode`` is ``"auto"`` (enumerate when affordable, otherwise sample),
     ``"exact"`` to force full enumeration, or ``"monte-carlo"`` to force
@@ -154,11 +165,16 @@ def equity(hands, board=(), trials=DEFAULT_TRIALS, seed=None,
     for hand in hands:
         dead.update(hand)
     deck = [c for c in FULL_DECK if c not in dead]
-    needed = 5 - len(board)
+    needed = BOARD_SIZE - len(board)
 
     runouts = comb(len(deck), needed)
+    work = runouts * len(hands)
     if mode == "auto":
-        mode = "exact" if runouts * len(hands) <= exact_budget else "monte-carlo"
+        mode = "exact" if work <= exact_budget else "monte-carlo"
+    elif mode == "exact" and work > EXACT_CEILING:
+        # Too wide to walk while somebody waits; say so by answering as
+        # monte-carlo rather than taking the minute it would need.
+        mode = "monte-carlo"
     if mode == "exact":
         draws = combinations(deck, needed)
     elif mode == "monte-carlo":
@@ -184,6 +200,6 @@ def equity(hands, board=(), trials=DEFAULT_TRIALS, seed=None,
             made=tuple(made[i]),
             # Only meaningful when the board is already complete, where the one
             # runout is the real one.
-            best_hand=describe(last_scores[i]) if len(board) == 5 else "",
+            best_hand=describe(last_scores[i]) if len(board) == BOARD_SIZE else "",
         ))
     return report

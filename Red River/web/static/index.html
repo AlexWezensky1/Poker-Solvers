@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Texas Hold'em Solver</title>
+<title>Red River Solver</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main>
   <header>
-    <h1>Texas Hold'em Solver</h1>
+    <h1>Red River Solver</h1>
     <nav class="elsewhere">
+      <a href="/holdem/">Hold&rsquo;em</a>
       <a href="/noah/">Noah&rsquo;s Ark</a>
-      <a href="/redriver/">Red River</a>
       <a href="/hmrds/">HMRDS</a>
       <a href="/">Home</a>
     </nav>
@@ -22,6 +22,10 @@
   <section class="panel deck-panel">
     <div id="deck" class="deck"></div>
     <div class="side">
+      <div id="speed" class="speed" role="group" aria-label="Solver speed">
+        <button type="button" class="seg on" data-speed="fast">Fast</button>
+        <button type="button" class="seg" data-speed="precise">Precise</button>
+      </div>
       <button id="clear" type="button" class="ghost">Clear</button>
       <!-- Holds the column at the width of the longest line it can ever show,
            so a shorter count never resizes the deck beside it. -->

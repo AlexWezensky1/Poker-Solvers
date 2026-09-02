@@ -1,4 +1,4 @@
-"""Texas Hold'em hand evaluator for 5-, 6- or 7-card hands.
+"""Red River hand evaluator for 5-, 6- or 7-card hands.
 
 Every hand is reduced to a single int; a bigger int is a better hand, and equal
 ints are a genuine chop.  The score packs a category into the high bits followed

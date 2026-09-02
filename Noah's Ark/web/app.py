@@ -13,15 +13,17 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from holdem.cards import cards_str, parse_cards
-from holdem.equity import DEFAULT_TRIALS, MAX_PLAYERS, equity
+from noahsark.cards import cards_str, parse_cards
+from noahsark.equity import DEFAULT_TRIALS, MAX_PLAYERS, equity
 
-#: Keeps a single request from tying the server up for more than a second or two.
-MAX_TRIALS = 250_000
+#: A ceiling rather than a budget: it stops a hand-written request asking for a
+#: run that never comes back. Precise asks for the million when the walk is not
+#: on offer, which is the only time anything asks for this much.
+MAX_TRIALS = 1_000_000
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
-app = FastAPI(title="Texas Hold'em Solver", docs_url="/holdem/api/docs", redoc_url=None)
+app = FastAPI(title="Noah's Ark Solver", docs_url="/noah/api/docs", redoc_url=None)
 
 
 class EquityRequest(BaseModel):
@@ -60,12 +62,12 @@ class EquityResponse(BaseModel):
     hands: list[HandResponse]
 
 
-@app.get("/holdem/api/health")
+@app.get("/noah/api/health")
 def health():
     return {"status": "ok", "max_players": MAX_PLAYERS, "max_trials": MAX_TRIALS}
 
 
-@app.post("/holdem/api/equity", response_model=EquityResponse)
+@app.post("/noah/api/equity", response_model=EquityResponse)
 def calculate(request: EquityRequest):
     try:
         hands = []
@@ -105,8 +107,8 @@ def calculate(request: EquityRequest):
 
 @app.get("/", include_in_schema=False)
 def index():
-    """The solver lives under /holdem; keep the bare domain pointing at it."""
-    return RedirectResponse("/holdem/")
+    """The solver lives under /noah; keep the bare domain pointing at it."""
+    return RedirectResponse("/noah/")
 
 
-app.mount("/holdem", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+app.mount("/noah", StaticFiles(directory=STATIC_DIR, html=True), name="static")
