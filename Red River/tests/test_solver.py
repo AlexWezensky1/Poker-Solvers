@@ -128,6 +128,15 @@ def test_flush_beats_straight_on_seven_cards():
     assert category(value) == FLUSH
 
 
+def test_a_suit_thirteen_deep_is_still_a_flush():
+    """The board can run long enough to hold every card of a suit. The quick
+    flush test adds three to each four bit count and reads the top bit, which
+    carries out of the nibble at thirteen -- so this used to come back as a
+    high card while holding a royal flush."""
+    hand = parse_cards("As Ks Qs Js Ts 9s 8s 7s 6s 5s 4s 3s 2s 2d 3d 4d 5d")
+    assert describe(score(hand)) == "royal flush", describe(score(hand))
+
+
 def test_a_board_is_finished_only_when_it_ends_black():
     for text, done in [
         ("Jh Ts 2c 5d 7s", True),    # the river came black straight away

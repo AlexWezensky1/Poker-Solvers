@@ -113,9 +113,12 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
 }
 /* The felt and the board share the middle cell; the felt is first in the
    markup, so the board paints over it. */
+/* Rounded rather than an oval. A board that can run to seven rows is taller
+   than it is wide, and a 50% radius on that draws a pointed arch rather than
+   the felt it is standing in for. */
 .felt {
   grid-area: 2 / 2;
-  border-radius: 50%;
+  border-radius: 18px;
   border: 1px solid var(--line);
   background: radial-gradient(ellipse at center, rgba(63, 178, 127, 0.10), rgba(63, 178, 127, 0.02) 72%, transparent);
 }

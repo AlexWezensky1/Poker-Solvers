@@ -34,11 +34,12 @@ DEFAULT_TRIALS = 100_000
 FLOP_AND_TURN = 4
 MIN_BOARD = 5
 
-#: A safety rail rather than a rule. The river stops on its own -- there are
-#: always black cards left to end it -- but the board has to stop growing
-#: somewhere, and fifteen reds in a row is about three chances in a hundred
-#: thousand, far below anything the answer is quoted to.
-MAX_BOARD = 20
+#: The longest board the game can actually produce. Every red card has to be
+#: dealt on the river, which means none may be spent anywhere else -- the flop,
+#: the turn and every hole card black -- and then a black one to end it:
+#: 3 + 1 + 26 + 1. There are always blacks left to finish on, with two players
+#: or eight, so this is a real ceiling rather than a rail.
+MAX_BOARD = 31
 
 #: Walk every runout while there are fewer than this many of them.
 DEFAULT_EXACT_BUDGET = 1_500_000

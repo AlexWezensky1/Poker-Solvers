@@ -3,11 +3,11 @@
 const RANKS = "23456789TJQKA";
 const SUITS = "shdc";
 const MAX_PLAYERS = 8;
-// Flop, turn, then the river for as long as it keeps coming up red. Ten slots
-// covers all but about two boards in a hundred; the engine allows more, they
-// just cannot be typed in here.
-const STREETS = [3, 1];
-const BOARD_SIZE = 10;
+// Flop, turn, then the river for as long as it keeps coming up red. Thirty one
+// slots is the longest board the game can deal: every red card on the river,
+// which needs the flop, the turn and every hole card black, and then the black
+// that ends it. Five to a row, and the last row holds that final card.
+const BOARD_SIZE = 31;
 
 // The deck grid: one row per suit, ranks running high to low.
 const DECK_RANKS = "AKQJT98765432";
@@ -138,17 +138,14 @@ function makeCardInput() {
   return input;
 }
 
-//: The board laid out a row at a time: the flop, the turn under it, and then
-//: the river four to a row for as long as it ran.
-const BOARD_ROWS = [3, 1, 4, 2];
+//: Five to a row, then the one slot the very last black card would land in.
+const BOARD_ROWS = [5, 5, 5, 5, 5, 5, 1];
 
 function buildBoard() {
   let dealt = 0;
   BOARD_ROWS.forEach((size, index) => {
     const row = document.createElement("div");
     row.className = "board-row";
-    // The turn sits close under the flop; the river stands off from both.
-    if (index === 1) row.classList.add("tight");
     for (let i = 0; i < size && dealt < BOARD_SIZE; i++, dealt++) {
       const slot = document.createElement("div");
       slot.className = "slot";

@@ -199,7 +199,14 @@ def score_accumulator(acc, hole, board):
     best = _CACHE.get(key)
     if best is None:
         best = _CACHE[key] = _score_ranks(key)
-    if ((acc >> _SUIT_SHIFT) + 0x3333) & 0x8888:
+    # Adding three to each nibble and reading the top bit finds a suit five
+    # deep, but only while no nibble passes twelve -- at thirteen it carries
+    # into its neighbour and the flush is missed. Seven or eight cards can
+    # never get there, but reading the count directly as well costs nothing and
+    # holds for any number. A false positive is harmless: _score_flush answers
+    # -1 when no suit got there, and the ranks win that comparison.
+    suits = acc >> _SUIT_SHIFT
+    if ((suits + 0x3333) | suits) & 0x8888:
         flush = _score_flush(list(hole) + list(board))
         if flush > best:
             return flush
