@@ -99,7 +99,13 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
 .card.suit-c { color: var(--club); }
 
 /* The table: hands around the ring, board in the middle */
-.table-panel { padding: 0 10px; display: flex; justify-content: center; }
+/* No panel round it: the seats and the felt are boxes already, and a border
+   drawn round all of them was a second frame saying the same thing. The margin
+   is what the panel used to contribute. */
+.table-panel {
+  padding: 0 10px; margin-bottom: 13px;
+  display: flex; justify-content: center;
+}
 .table {
   position: relative;
   width: 100%;
@@ -135,6 +141,8 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
   gap: 10px;
 }
 .board-row { display: flex; justify-content: center; gap: 8px; }
+/* Rows the hand has not reached yet. */
+.board-row.gone { display: none; }
 /* The turn belongs with the flop, so it sits closer to it than to the river. */
 .board-row.tight { margin-top: -5px; }
 .board .card { width: 42px; height: 50px; font-size: 16px; border-radius: 6px; }

@@ -81,9 +81,30 @@ function setActive(input) {
 function nextEmpty(from) {
   for (let step = 1; step <= allInputs.length; step++) {
     const slot = allInputs[(from + step) % allInputs.length];
-    if (cardOf(slot) === "") return slot;
+    if (cardOf(slot) === "" && reachable(slot)) return slot;
   }
   return null;
+}
+
+// Only as many board rows as the hand has needed. Thirty one slots is the most
+// the river can ever run to, but almost every board stops in the first five, so
+// the rest stay out of the way until there is something to put in them: a row
+// appears once the row before it is full, and stays while it holds a card.
+function showBoardRows() {
+  let reveal = true;  // the flop has to be somewhere
+  for (const row of boardEl.querySelectorAll(".board-row")) {
+    const slots = [...row.querySelectorAll("input")];
+    const holds = slots.some((slot) => cardOf(slot));
+    const shown = reveal || holds;
+    row.classList.toggle("gone", !shown);
+    reveal = shown && slots.every((slot) => cardOf(slot));
+  }
+}
+
+// A slot in a row that is not showing cannot be dealt into.
+function reachable(slot) {
+  const row = slot.closest(".board-row");
+  return !row || !row.classList.contains("gone");
 }
 
 // A deck click deals into the highlighted slot and moves on to the next empty
@@ -216,6 +237,10 @@ function buildDeck() {
 // Marks anything unparseable, plus every copy of a card used more than once,
 // and greys out the deck cards that are already on the table.
 function refresh() {
+  // Before anything else: the rows on show decide which slots can be dealt
+  // into, and setActive is picking one straight after this.
+  showBoardRows();
+
   const seen = new Map();
   allInputs.forEach((input) => {
     const value = cardOf(input);
@@ -427,5 +452,6 @@ for (const button of speedEl.querySelectorAll(".seg")) {
 }
 
 clearBtn.addEventListener("click", clearAll);
+showBoardRows();  // nothing dealt yet, so only the first row is out
 setStatus("");
 setActive(allInputs[0]);

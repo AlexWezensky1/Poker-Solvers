@@ -99,7 +99,13 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
 .card.suit-c { color: var(--club); }
 
 /* The table: hands around the ring, board in the middle */
-.table-panel { padding: 0 10px; display: flex; justify-content: center; }
+/* No panel round it: the seats and the felt are boxes already, and a border
+   drawn round all of them was a second frame saying the same thing. The margin
+   is what the panel used to contribute. */
+.table-panel {
+  padding: 0 10px; margin-bottom: 13px;
+  display: flex; justify-content: center;
+}
 .table {
   position: relative;
   width: 100%;
