@@ -90,15 +90,6 @@ function isDealt(seat) {
   return players[seat].box.checked;
 }
 
-// Board slots plus the seats still in the pot: what is actually on the table.
-function liveInputs() {
-  const live = [...boardInputs];
-  players.forEach((player, seat) => {
-    if (isDealt(seat)) live.push(...player.inputs);
-  });
-  return live;
-}
-
 // The order a run of deck clicks fills the table in: your own hand, then the
 // four community cards that open the game, then the rest of the seats, and the
 // later streets last. It is not how the cards are dealt -- everybody is dealt
@@ -209,6 +200,16 @@ function buildSeat(seat) {
   box.checked = seat < 2;
   box.disabled = seat === 0;
   box.addEventListener("change", () => {
+    if (!box.checked) {
+      // Not in the hand at all, which is not the same as folding it: these
+      // cards were never dealt, so they go back to the deck rather than
+      // sitting in a seat nobody is playing. Folding is what keeps them.
+      const player = players[seat];
+      player.inputs.forEach((input) => setCard(input, ""));
+      player.folded = false;
+      player.fold.textContent = "Fold";
+      player.fold.classList.remove("on");
+    }
     buildFillOrder();
     refresh();  // enables or disables the slots, so it has to run first
     if (inHand(seat)) {
@@ -302,8 +303,10 @@ function refresh() {
     player.inputs.forEach((input) => { input.disabled = out || player.folded; });
   });
 
+  // Every slot counts: a seat checked out has been emptied, and a folded one
+  // is still holding cards nobody else can be dealt.
   const seen = new Map();
-  liveInputs().forEach((input) => {
+  allInputs.forEach((input) => {
     const card = cardOf(input);
     if (card) seen.set(card, (seen.get(card) || 0) + 1);
   });
