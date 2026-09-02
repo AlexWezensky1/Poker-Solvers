@@ -280,7 +280,7 @@ function madeOdds(made) {
   box.className = "made";
 
   const head = document.createElement("summary");
-  head.textContent = "Hand by the river";
+  head.textContent = "Hand at showdown";
   box.appendChild(head);
 
   const table = document.createElement("div");

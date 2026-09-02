@@ -120,11 +120,16 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
   background: radial-gradient(ellipse at center, rgba(63, 178, 127, 0.10), rgba(63, 178, 127, 0.02) 72%, transparent);
 }
 
+/* Five to a row. Ten slots in a line make the middle column of the ring twice
+   the width of the seats either side of it, so the standard board sits on top
+   and the cards the river ran on for sit under it. */
 .board {
   grid-area: 2 / 2;
   align-self: center;
   justify-content: center;
-  display: flex; gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(5, auto);
+  gap: 8px;
 }
 .board .card { width: 42px; height: 50px; font-size: 16px; border-radius: 6px; }
 .board .card::placeholder { font-size: 12px; }
@@ -182,6 +187,9 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
    push the seat over the one below it, so the name gives way instead. */
 .made-row > span:first-child {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  /* The engine names the categories in lower case, which is right for a
+     sentence and wrong for a column of labels. */
+  text-transform: capitalize;
 }
 .made-row > span:last-child { white-space: nowrap; flex: 0 0 auto; }
 /* Kept in the list so every seat reads the same, but out of the way. */

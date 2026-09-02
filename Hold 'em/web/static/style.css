@@ -182,6 +182,9 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
    push the seat over the one below it, so the name gives way instead. */
 .made-row > span:first-child {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  /* The engine names the categories in lower case, which is right for a
+     sentence and wrong for a column of labels. */
+  text-transform: capitalize;
 }
 .made-row > span:last-child { white-space: nowrap; flex: 0 0 auto; }
 /* Kept in the list so every seat reads the same, but out of the way. */
