@@ -13,13 +13,6 @@ const BOARD_SIZE = 31;
 const DECK_RANKS = "AKQJT98765432";
 const SUIT_PIPS = { s: "♠", h: "♥", d: "♦", c: "♣" };
 
-// Seats ring the board around a three by three grid, clockwise from the top,
-// with the board itself in the middle cell. Cells cannot overlap, so neither
-// can two seats, however tall their results grow.
-const SEAT_CELLS = [
-  [1, 2], [1, 3], [2, 3], [3, 3], [3, 2], [3, 1], [2, 1], [1, 1],
-];
-
 const boardEl = document.getElementById("board");
 const playersEl = document.getElementById("players");
 const deckEl = document.getElementById("deck");
@@ -179,18 +172,9 @@ function buildBoard() {
   });
 }
 
-// Which grid cell a seat occupies, counted clockwise from the top.
-function seatPosition(index) {
-  const [row, column] = SEAT_CELLS[index];
-  return { row, column };
-}
-
 function buildSeat(seat) {
   const row = document.createElement("div");
   row.className = "player";
-  const spot = seatPosition(seat);
-  row.style.gridRow = spot.row;
-  row.style.gridColumn = spot.column;
 
   const number = document.createElement("div");
   number.className = "seat";
