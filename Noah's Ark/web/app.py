@@ -29,6 +29,10 @@ app = FastAPI(title="Noah's Ark Solver", docs_url="/noah/api/docs", redoc_url=No
 class EquityRequest(BaseModel):
     hands: list[str] = Field(..., description="Two card hands, e.g. ['AsKs', 'QhQd']")
     board: str = Field("", description="0-5 community cards, e.g. 'Jh Ts 2c'")
+    dead: str = Field(
+        "",
+        description="Cards out of the deck but not in any hand still in the pot -- a folded hand's. Not scored, but not dealt to anybody either.",
+    )
     trials: int = Field(DEFAULT_TRIALS, ge=1, le=MAX_TRIALS)
     mode: Literal["auto", "exact"] = Field(
         "exact", description="'auto' samples instead of enumerating when a runout count is large"
@@ -77,9 +81,11 @@ def calculate(request: EquityRequest):
                 raise ValueError("hand %d has %d cards, expected 2" % (i + 1, len(cards)))
             hands.append(cards)
         board = parse_cards(request.board)
+        dead = parse_cards(request.dead)
 
         started = perf_counter()
-        report = equity(hands, board, trials=request.trials, mode=request.mode)
+        report = equity(hands, board, dead=dead,
+                        trials=request.trials, mode=request.mode)
         elapsed = perf_counter() - started
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

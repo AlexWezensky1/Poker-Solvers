@@ -140,6 +140,22 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
   gap: 8px;
   width: 100%;
 }
+/* The hand number on the left, the fold button on the right, on one line. */
+.seat-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+
+.fold {
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 5px;
+  padding: 2px 7px; font-size: 9px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.fold:hover { background: var(--panel-2); color: var(--text); }
+.fold.on { border-color: var(--bad); color: var(--bad); }
+
+/* Folded: still holding its cards, just no longer playing them. */
+.player.folded .holecards { opacity: 0.4; }
+.player.folded .result { display: none; }
+
 .player {
   display: flex;
   flex-direction: column;

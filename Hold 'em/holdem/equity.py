@@ -73,7 +73,7 @@ class EquityReport:
         return self.mode == "exact"
 
 
-def _validate(hands, board):
+def _validate(hands, board, dead):
     if len(hands) < 2:
         raise ValueError("need at least 2 hands to compare")
     if len(hands) > MAX_PLAYERS:
@@ -84,7 +84,8 @@ def _validate(hands, board):
     if len(board) > 5:
         raise ValueError("the board holds at most 5 cards, got %d" % len(board))
     groups = [("hand %d" % (i + 1), h) for i, h in enumerate(hands)]
-    check_no_duplicates(groups + [("the board", board)])
+    check_no_duplicates(groups + [("the board", board),
+                                  ("the folded hands", dead)])
 
 
 def _tally(hands, board, draws):
@@ -135,12 +136,17 @@ def _tally(hands, board, draws):
     return wins, ties, equity, made, trials, last_scores
 
 
-def equity(hands, board=(), trials=DEFAULT_TRIALS, seed=None,
+def equity(hands, board=(), dead=(), trials=DEFAULT_TRIALS, seed=None,
            mode="auto", exact_budget=DEFAULT_EXACT_BUDGET):
     """Compute equity for two or more Hold'em hands.
 
     ``hands`` is a sequence of two-card sequences and ``board`` holds 0-5
     community cards, all as card ints from :mod:`holdem.cards`.
+
+    ``dead`` holds cards that are out of the deck without belonging to anyone
+    still in the pot -- a folded hand's. They are not scored and take no share,
+    but nothing unknown can be dealt them either, which is the point of naming
+    them.
 
     ``mode`` is ``"auto"`` (enumerate when affordable, otherwise sample),
     ``"exact"`` to force full enumeration, or ``"monte-carlo"`` to force
@@ -148,12 +154,13 @@ def equity(hands, board=(), trials=DEFAULT_TRIALS, seed=None,
     """
     hands = [tuple(h) for h in hands]
     board = tuple(board)
-    _validate(hands, board)
+    dead = tuple(dead)
+    _validate(hands, board, dead)
 
-    dead = set(board)
+    gone = set(board) | set(dead)
     for hand in hands:
-        dead.update(hand)
-    deck = [c for c in FULL_DECK if c not in dead]
+        gone.update(hand)
+    deck = [c for c in FULL_DECK if c not in gone]
     needed = 5 - len(board)
 
     runouts = comb(len(deck), needed)

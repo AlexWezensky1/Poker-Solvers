@@ -135,9 +135,25 @@ function buildSeat(seat) {
   const row = document.createElement("div");
   row.className = "player";
 
+  const header = document.createElement("div");
+  header.className = "seat-row";
+
   const number = document.createElement("div");
   number.className = "seat";
   number.textContent = "Hand " + (seat + 1);
+
+  // A folded hand is out of the pot, but its cards stay off the deck so
+  // nobody else is dealt them either -- which changes everybody's equity.
+  const fold = document.createElement("button");
+  fold.type = "button";
+  fold.className = "fold";
+  fold.textContent = "Fold";
+  fold.addEventListener("click", () => {
+    const player = players[seat];
+    setFolded(player, !player.folded);
+    refresh();
+  });
+  header.append(number, fold);
 
   const holecards = document.createElement("div");
   holecards.className = "holecards";
@@ -147,9 +163,9 @@ function buildSeat(seat) {
   const result = document.createElement("div");
   result.className = "result empty";
 
-  row.append(number, holecards, result);
+  row.append(header, holecards, result);
   playersEl.appendChild(row);
-  players.push({ row, inputs, result });
+  players.push({ row, inputs, result, fold, folded: false });
 }
 
 function buildDeck() {
@@ -179,6 +195,14 @@ function buildDeck() {
 
 // Marks anything unparseable, plus every copy of a card used more than once,
 // and greys out the deck cards that are already on the table.
+function setFolded(player, folded) {
+  player.folded = folded;
+  player.fold.textContent = folded ? "Folded" : "Fold";
+  player.fold.classList.toggle("on", folded);
+  player.row.classList.toggle("folded", folded);
+  player.inputs.forEach((input) => { input.disabled = folded; });
+}
+
 function refresh() {
   const seen = new Map();
   allInputs.forEach((input) => {
@@ -227,13 +251,15 @@ function collect() {
   }
 
   const hands = [];
+  const dead = [];
   players.forEach((player, seat) => {
     const [a, b] = player.inputs.map(cardOf);
     if (a === "" && b === "") return;
     if (!isCard(a) || !isCard(b)) {
       throw new Error("Hand " + (seat + 1) + " needs two cards, like As Ks.");
     }
-    hands.push({ seat, text: a + b });
+    if (player.folded) dead.push(a, b);
+    else hands.push({ seat, text: a + b });
   });
 
   if (hands.length < 2) throw new Error("Enter at least two hands.");
@@ -242,7 +268,7 @@ function collect() {
   const duplicate = used.find((card, i) => used.indexOf(card) !== i);
   if (duplicate) throw new Error(duplicate + " is used more than once.");
 
-  return { board, hands };
+  return { board, hands, dead };
 }
 
 // The ten categories, best first, as a fold-out table. Every runout finishes
@@ -271,6 +297,25 @@ function madeOdds(made) {
   }
   box.appendChild(table);
   return box;
+}
+
+// The multiplication that lands at the runout count: n × (n-1) × ... × (n-k+1),
+// divided by k! since a runout is a combination rather than a sequence -- the
+// order of the community cards does not matter. Returned empty when there is
+// nothing to spell out.
+function exhaustiveFormula(deck, toCome) {
+  if (toCome <= 0) return "";
+  const perm = [];
+  for (let i = 0; i < toCome; i++) perm.push(deck - i);
+  const denom = toCome > 1 ? factorial(toCome) : 1;
+  const numer = perm.join(" × ");
+  return denom === 1 ? numer : numer + " ÷ " + denom;
+}
+
+function factorial(n) {
+  let out = 1;
+  for (let i = 2; i <= n; i++) out *= i;
+  return out;
 }
 
 function render(hands, results) {
@@ -349,6 +394,7 @@ async function run(input) {
       body: JSON.stringify({
         hands: input.hands.map((hand) => hand.text),
         board: input.board.join(""),
+        dead: input.dead.join(""),
       }),
     });
     const payload = await response.json();
@@ -358,7 +404,14 @@ async function run(input) {
     render(input.hands, payload.hands);
     const runs = payload.trials.toLocaleString();
     const noun = payload.trials === 1 ? " runout" : " runouts";
-    setStatus(runs + noun + " in " + payload.seconds + " seconds");
+    const dealt = input.hands.length * 2 + input.board.length + input.dead.length;
+      const deck = 52 - dealt;
+      const toCome = BOARD_SIZE - input.board.length;
+      const formula = exhaustiveFormula(deck, toCome);
+    const walked = payload.mode === "exact"
+      ? " exhaustive" + noun + (formula ? " (" + formula + ")" : "")
+      : noun;
+    setStatus(runs + walked + " in " + payload.seconds + " seconds");
   } catch (error) {
     if (ticket !== latest) return;
     clearResults();
@@ -375,7 +428,11 @@ function tableQuery() {
   const params = new URLSearchParams();
   for (const player of players) {
     const cards = player.inputs.map(cardOf).filter(Boolean).join("");
-    if (cards) params.append("ranges", cards);
+    if (!cards) continue;
+    // A folded hand is out of the pot but its cards are out of the deck, so
+    // it travels as `dead` -- one entry per hand rather than a loose pile,
+    // which is what lets the cards go back into the seat they came from.
+    params.append(player.folded ? "dead" : "ranges", cards);
   }
   const board = boardInputs.map(cardOf).filter(Boolean).join("");
   if (board) params.set("board", board);
@@ -397,21 +454,29 @@ function readCards(text) {
 
 function restoreTable() {
   const params = new URLSearchParams(location.search);
-  const hands = params.getAll("ranges");
+  const live = params.getAll("ranges");
+  const folded = params.getAll("dead");
   const board = readCards(params.get("board") || "");
-  if (!hands.length && !board.length) return false;
+  if (!live.length && !folded.length && !board.length) return false;
 
-  hands.slice(0, players.length).forEach((text, seat) => {
-    const slots = players[seat].inputs;
+  let seat = 0;
+  const fill = (text, isFolded) => {
+    if (seat >= players.length) return;
+    const player = players[seat++];
+    setFolded(player, isFolded);
+    const slots = player.inputs;
     readCards(text).slice(0, slots.length)
       .forEach((card, i) => setCard(slots[i], card));
-  });
+  };
+  live.forEach((text) => fill(text, false));
+  folded.forEach((text) => fill(text, true));
   board.slice(0, boardInputs.length)
     .forEach((card, i) => setCard(boardInputs[i], card));
   return true;
 }
 
 function clearAll() {
+  players.forEach((player) => setFolded(player, false));
   allInputs.forEach((input) => setCard(input, ""));
   refresh();
   setStatus("");

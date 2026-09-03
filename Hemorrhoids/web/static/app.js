@@ -497,7 +497,7 @@ async function run(input) {
 
     render(input.seats, payload.hands);
     const how = payload.mode === "exact"
-      ? "Exact"
+      ? "Exhaustive"
       : Math.round(payload.trials).toLocaleString() + " simulations";
     // Say why Precise sampled, so the button does not look like it was ignored.
     const why = precise && payload.mode !== "exact" ? "Too many unknowns, " : "";
