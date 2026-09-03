@@ -322,3 +322,66 @@ def equity(hands, board=(), dead=(), trials=DEFAULT_TRIALS, seed=None,
             best_hand=describe(last_scores[i]) if is_complete(board) else "",
         ))
     return report
+
+
+#: A Hold'em board is five community cards. This variant's board is a different
+#: length, so the comparison against Hold'em stops there.
+HOLDEM_BOARD = 5
+
+
+def holdem_made(hands, board=(), dead=(), trials=DEFAULT_TRIALS, seed=None,
+                mode="auto", exact_budget=DEFAULT_EXACT_BUDGET):
+    """How often each hand ends in each category under ordinary Hold'em rules.
+
+    Same hole cards and the same board so far, but the board stops at five
+    community cards -- which is the board this deal would have had if it were
+    Hold'em. Returns one list of fractions per hand, in :data:`BUCKET_NAMES`
+    order, so it reads directly against the variant's own numbers.
+
+    Cards past the fifth are simply not dealt here rather than being held out
+    of the deck. It makes no difference either way: a board with five or more
+    cards leaves nothing to enumerate, and a board with fewer has no cards
+    past the fifth to argue about.
+    """
+    hands = [tuple(h) for h in hands]
+    board = tuple(board)[:HOLDEM_BOARD]
+
+    gone = set(board) | set(dead)
+    for hand in hands:
+        gone.update(hand)
+    deck = [c for c in FULL_DECK if c not in gone]
+    needed = HOLDEM_BOARD - len(board)
+    if needed < 0 or needed > len(deck):
+        return [[0.0] * len(BUCKET_NAMES) for _ in hands]
+
+    work = comb(len(deck), needed) * max(len(hands), 1)
+    if mode == "auto":
+        mode = "exact" if work <= exact_budget else "monte-carlo"
+    elif mode == "exact" and work > EXACT_CEILING:
+        mode = "monte-carlo"
+
+    if mode == "exact":
+        draws = combinations(deck, needed)
+    else:
+        rng = random.Random(seed)
+        draws = (rng.sample(deck, needed) for _ in range(max(int(trials), 1)))
+
+    seats = range(len(hands))
+    hole_accs = [CARD_KEY[a] + CARD_KEY[b] for a, b in hands]
+    board_acc = sum(CARD_KEY[c] for c in board)
+    made = [[0] * len(BUCKET_NAMES) for _ in seats]
+    total = 0
+
+    for draw in draws:
+        acc = board_acc
+        for card in draw:
+            acc += CARD_KEY[card]
+        runout = board + tuple(draw)
+        for i in seats:
+            value = score_accumulator(hole_accs[i] + acc, hands[i], runout)
+            made[i][bucket(value)] += 1
+        total += 1
+
+    if not total:
+        return [[0.0] * len(BUCKET_NAMES) for _ in hands]
+    return [[count / total for count in row] for row in made]

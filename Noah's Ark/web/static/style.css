@@ -195,10 +195,20 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
 .made[open] > summary::after { content: " ▴"; }
 .made > summary:hover { color: var(--text); }
 .made-rows { margin-top: 3px; }
+/* Three columns: the category, what it comes to here, and what it would have
+   come to in Hold'em. The two numbers are the same width so they line up
+   down the table however wide the seat is. */
 .made-row {
-  display: flex; justify-content: space-between; gap: 6px;
+  display: grid; grid-template-columns: 1fr auto auto; gap: 6px;
   color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums;
 }
+.made-row > span:nth-child(2), .made-row > span:nth-child(3) {
+  min-width: 42px; text-align: right;
+}
+/* The baseline is the quieter of the two: this game's own number leads. */
+.made-base { opacity: 0.62; }
+.made-head { color: var(--muted); opacity: 0.75; letter-spacing: 0.04em; }
+.made-head > span { font-size: 9px; text-transform: uppercase; }
 /* A seat in the ring is narrow. Ten rows that each wrap onto three lines would
    push the seat over the one below it, so the name gives way instead. */
 .made-row > span:first-child {

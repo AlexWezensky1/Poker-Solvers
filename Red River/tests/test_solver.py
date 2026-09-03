@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from redriver.cards import FULL_DECK, parse_cards  # noqa: E402
 from redriver.cards import is_red  # noqa: E402
 from redriver.equity import (  # noqa: E402
-    MAX_BOARD, equity, is_complete, _sample,
+    MAX_BOARD, equity, holdem_made, is_complete, _sample,
 )
 from redriver.evaluator import (  # noqa: E402
     FLUSH, FULL_HOUSE, HIGH_CARD, PAIR, QUADS, STRAIGHT, STRAIGHT_FLUSH,
@@ -260,6 +260,29 @@ def test_rejects_bad_input():
         else:
             raise AssertionError("expected %r to be refused" % expected)
 
+
+def test_holdem_baseline_stops_at_five_community_cards():
+    """Red River's river runs on; the baseline is the same deal read as
+    Hold'em, which stops at the fifth card whatever colour it was."""
+    hands = [parse_cards("AsKs"), parse_cards("QhQd")]
+    board = parse_cards("Jh Ts 2c 5d 7h 8c")   # six out: 7h kept it alive, 8c ended it
+
+    there = holdem_made(hands, board, mode="exact")
+    for row in there:
+        # Five cards are already out, so the baseline has nothing to walk and
+        # each hand lands in exactly one category.
+        assert sorted(row)[-1] == 1.0
+        assert abs(sum(row) - 1.0) < 1e-9
+
+
+def test_holdem_baseline_walks_what_is_still_to_come():
+    hands = [parse_cards("AsKs"), parse_cards("QhQd")]
+    board = parse_cards("Jh Ts 2c")   # a flop; two cards still to come
+    rows = holdem_made(hands, board, mode="exact")
+    for row in rows:
+        assert abs(sum(row) - 1.0) < 1e-9
+    # Spread across more than one category, since the board is not settled.
+    assert sum(1 for share in rows[0] if share > 0) > 1
 
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]

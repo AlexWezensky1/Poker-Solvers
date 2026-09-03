@@ -12,7 +12,7 @@ from itertools import combinations
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from noahsark.cards import FULL_DECK, parse_cards  # noqa: E402
-from noahsark.equity import equity  # noqa: E402
+from noahsark.equity import equity, holdem_made  # noqa: E402
 from noahsark.evaluator import (  # noqa: E402
     FLUSH, FULL_HOUSE, HIGH_CARD, PAIR, QUADS, STRAIGHT, STRAIGHT_FLUSH,
     TRIPS, TWO_PAIR, category, describe, score,
@@ -240,6 +240,38 @@ def test_rejects_bad_input():
             continue
         raise AssertionError("%r should not parse" % bad)
 
+
+def test_holdem_baseline_stops_at_five_community_cards():
+    """Noah's Ark deals a sixth card; the baseline is the same deal read as
+    Hold'em, so it has one card fewer to come and makes fewer big hands."""
+    hands = [parse_cards("AsKs"), parse_cards("QhQd")]
+    board = parse_cards("Jh Ts 2c 5d")   # four out; Noah gets two more, Hold'em one
+
+    here = equity(hands, board, mode="exact").hands[0].made_pct
+    there = holdem_made(hands, board, mode="exact")[0]
+
+    assert abs(sum(pct for _, pct in here) - 100.0) < 1e-9
+    assert abs(sum(there) - 1.0) < 1e-9
+
+    names = [name for name, _ in here]
+    two_pair = names.index("two pair")
+    high_card = names.index("high card")
+    # One card cannot pair both the ace and the king, so Hold'em never gets
+    # there; and it busts far more often for the same reason.
+    assert there[two_pair] == 0.0
+    assert here[two_pair][1] > 0.0
+    # made_pct is a percentage, holdem_made a fraction, so scale before comparing.
+    assert there[high_card] * 100 > here[high_card][1]
+
+
+def test_holdem_baseline_on_a_full_board_is_a_single_outcome():
+    """With five community cards already out there is nothing left to walk,
+    so every hand sits in exactly one category."""
+    hands = [parse_cards("AsKs"), parse_cards("QhQd")]
+    board = parse_cards("Jh Ts 2c 5d 8h 9c")   # six out; the baseline reads five
+    for row in holdem_made(hands, board, mode="exact"):
+        assert sorted(row)[-1] == 1.0
+        assert abs(sum(row) - 1.0) < 1e-9
 
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]

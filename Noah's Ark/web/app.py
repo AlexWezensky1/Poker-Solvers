@@ -14,7 +14,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from noahsark.cards import cards_str, parse_cards
-from noahsark.equity import DEFAULT_TRIALS, MAX_PLAYERS, equity
+from noahsark.evaluator import BUCKET_NAMES
+from noahsark.equity import DEFAULT_TRIALS, MAX_PLAYERS, equity, holdem_made
 
 #: A ceiling rather than a budget: it stops a hand-written request asking for a
 #: run that never comes back. Precise asks for the million when the walk is not
@@ -56,6 +57,12 @@ class HandResponse(BaseModel):
         description="How often the hand ends as each category, best first. "
                     "Counted over every runout, so it sums to 100%.",
     )
+    made_holdem: list[CategoryOdds] = Field(
+        default_factory=list,
+        description="The same figures under ordinary Hold'em rules -- same "
+                    "hole cards, same board, but stopping at five community "
+                    "cards. A baseline to read this game's own numbers against.",
+    )
 
 
 class EquityResponse(BaseModel):
@@ -86,6 +93,9 @@ def calculate(request: EquityRequest):
         started = perf_counter()
         report = equity(hands, board, dead=dead,
                         trials=request.trials, mode=request.mode)
+        # The same deal read as ordinary Hold'em, for the column beside it.
+        baseline = holdem_made(hands, board, dead=dead,
+                               trials=request.trials, mode=request.mode)
         elapsed = perf_counter() - started
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -104,6 +114,10 @@ def calculate(request: EquityRequest):
                 tie=round(hand.tie_pct, 2),
                 made=[CategoryOdds(name=name, pct=round(pct, 2))
                       for name, pct in hand.made_pct],
+                made_holdem=[
+                    CategoryOdds(name=label, pct=round(100 * share, 2))
+                    for label, share in zip(BUCKET_NAMES, baseline[hand.index])
+                ],
                 best_hand=hand.best_hand,
             )
             for hand in report.hands

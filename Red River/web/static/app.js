@@ -318,8 +318,10 @@ function collect() {
 }
 
 // The ten categories, best first, as a fold-out table. Every runout finishes
-// as something, so the column sums to 100%.
-function madeOdds(made) {
+// as something, so each column sums to 100%. The second column is the same
+// deal read as ordinary Hold'em -- five community cards instead of this
+// game's -- which is what the extra cards here are worth.
+function madeOdds(made, baseline) {
   const box = document.createElement("details");
   box.className = "made";
 
@@ -329,18 +331,34 @@ function madeOdds(made) {
 
   const table = document.createElement("div");
   table.className = "made-rows";
-  for (const row of made) {
+
+  const heading = document.createElement("div");
+  heading.className = "made-row made-head";
+  const blank = document.createElement("span");
+  const here = document.createElement("span");
+  here.textContent = "Here";
+  const there = document.createElement("span");
+  there.textContent = "Hold’em";
+  heading.append(blank, here, there);
+  table.appendChild(heading);
+
+  made.forEach((row, i) => {
+    const other = baseline && baseline[i] ? baseline[i].pct : null;
     const line = document.createElement("div");
-    // A category it cannot make is still worth a row -- the list reads the
-    // same for every seat, so two of them can be compared straight down.
-    line.className = row.pct ? "made-row" : "made-row never";
+    // A category neither column can make is still worth a row -- the list
+    // reads the same for every seat, so two of them compare straight down.
+    line.className = (row.pct || other) ? "made-row" : "made-row never";
     const name = document.createElement("span");
     name.textContent = row.name;
     const pct = document.createElement("span");
     pct.textContent = row.pct.toFixed(2) + "%";
-    line.append(name, pct);
+    const base = document.createElement("span");
+    base.className = "made-base";
+    base.textContent = other === null ? "" : other.toFixed(2) + "%";
+    line.append(name, pct, base);
     table.appendChild(line);
-  }
+  });
+
   box.appendChild(table);
   return box;
 }
@@ -394,7 +412,7 @@ function render(hands, results) {
     // What the hand turns into by the river, folded away because it is ten
     // rows and most of them are usually zero.
     if (result.made && result.made.length) {
-      player.result.appendChild(madeOdds(result.made));
+      player.result.appendChild(madeOdds(result.made, result.made_holdem));
     }
 
     if (result.best_hand) {
