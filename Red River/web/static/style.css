@@ -228,11 +228,9 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
 
 /* Deck */
 .deck-panel { display: flex; align-items: flex-start; gap: 16px; }
-.side { flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px; }
-.status-sizer {
-  display: block; height: 0; overflow: hidden; visibility: hidden;
-  white-space: nowrap; font-size: 10px;
-}
+/* Pinned rather than sized by content. A longer status now wraps into its
+   own column rather than pulling the column wider and pushing the deck along. */
+.side { flex: none; width: 254px; display: flex; flex-direction: column; gap: 10px; }
 .deck {
   flex: 1 1 auto;
   display: grid;
@@ -289,7 +287,9 @@ button.ghost:hover { background: var(--panel-2); color: var(--text); }
   z-index: 1;
 }
 
-.status { margin: 0; color: var(--muted); font-size: 10px; min-height: 16px; }
+.status { display: flex; flex-direction: column; gap: 2px; margin: 0; color: var(--muted); font-size: 10px; min-height: 32px; }
+.status-line { display: block; }
+.status-detail { display: block; font-variant-numeric: tabular-nums; opacity: 0.7; min-height: 14px; }
 .status.error { color: var(--bad); }
 
 /* Too narrow for the ring: board on top, hands stacked below it. */
@@ -299,8 +299,7 @@ button.ghost:hover { background: var(--panel-2); color: var(--text); }
      told to fill the width outright. */
   .deck { max-width: none; width: 100%; }
   .side { flex-direction: row; align-items: center; width: 100%; }
-  .status-sizer { display: none; }
-
+  
   .players { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 }
 

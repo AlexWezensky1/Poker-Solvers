@@ -27,10 +27,10 @@
         <button type="button" class="seg" data-speed="precise">Precise</button>
       </div>
       <button id="clear" type="button" class="ghost">Clear</button>
-      <!-- Holds the column at the width of the longest line it can ever show,
-           so a shorter count never resizes the deck beside it. -->
-      <span class="status-sizer" aria-hidden="true">1,712,304 runouts in 10.123 seconds</span>
-      <p id="status" class="status"></p>
+      <div id="status" class="status">
+        <span class="status-line"></span>
+        <span class="status-detail"></span>
+      </div>
     </div>
   </section>
 

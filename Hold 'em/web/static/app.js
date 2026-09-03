@@ -234,8 +234,9 @@ function clearResults() {
   });
 }
 
-function setStatus(message, isError) {
-  statusEl.textContent = message;
+function setStatus(message, isError, detail) {
+  statusEl.querySelector(".status-line").textContent = message || "";
+  statusEl.querySelector(".status-detail").textContent = detail || "";
   statusEl.classList.toggle("error", Boolean(isError));
 }
 
@@ -408,10 +409,9 @@ async function run(input) {
       const deck = 52 - dealt;
       const toCome = BOARD_SIZE - input.board.length;
       const formula = exhaustiveFormula(deck, toCome);
-    const walked = payload.mode === "exact"
-      ? " exhaustive" + noun + (formula ? " (" + formula + ")" : "")
-      : noun;
-    setStatus(runs + walked + " in " + payload.seconds + " seconds");
+    const walked = payload.mode === "exact" ? " exhaustive" + noun : noun;
+    setStatus(runs + walked + " in " + payload.seconds + " seconds",
+              false, payload.mode === "exact" ? formula : "");
   } catch (error) {
     if (ticket !== latest) return;
     clearResults();

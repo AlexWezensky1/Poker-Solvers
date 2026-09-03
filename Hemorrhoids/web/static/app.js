@@ -349,8 +349,9 @@ function clearResults() {
   });
 }
 
-function setStatus(message, isError) {
-  statusEl.textContent = message;
+function setStatus(message, isError, detail) {
+  statusEl.querySelector(".status-line").textContent = message || "";
+  statusEl.querySelector(".status-detail").textContent = detail || "";
   statusEl.classList.toggle("error", Boolean(isError));
 }
 

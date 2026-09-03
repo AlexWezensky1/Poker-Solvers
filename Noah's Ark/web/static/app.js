@@ -249,8 +249,9 @@ function clearResults() {
   });
 }
 
-function setStatus(message, isError) {
-  statusEl.textContent = message;
+function setStatus(message, isError, detail) {
+  statusEl.querySelector(".status-line").textContent = message || "";
+  statusEl.querySelector(".status-detail").textContent = detail || "";
   statusEl.classList.toggle("error", Boolean(isError));
 }
 
@@ -423,14 +424,15 @@ async function run(input) {
       const deck = 52 - dealt;
       const toCome = BOARD_SIZE - input.board.length;
       const formula = exhaustiveFormula(deck, toCome);
-    let how;
+    let how, detail = "";
     if (payload.mode !== "exact") {
       how = " simulations";
     } else {
       const noun = payload.trials === 1 ? " runout" : " runouts";
-      how = " exhaustive" + noun + (formula ? " (" + formula + ")" : "");
+      how = " exhaustive" + noun;
+      detail = formula;
     }
-    setStatus(runs + how + " in " + payload.seconds + " seconds");
+    setStatus(runs + how + " in " + payload.seconds + " seconds", false, detail);
   } catch (error) {
     if (ticket !== latest) return;
     clearResults();
