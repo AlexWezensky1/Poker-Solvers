@@ -209,6 +209,30 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
 .made-base { opacity: 0.62; }
 .made-head { color: var(--muted); opacity: 0.75; letter-spacing: 0.04em; }
 .made-head > span { font-size: 9px; text-transform: uppercase; }
+
+/* A seat on a phone is about 150px wide, which is not enough for a category
+   name and two figures side by side -- the names came out as "Royal ..." and
+   "Four O...". The name takes a line of its own there and the two figures
+   share the next one, which reads better than three truncated columns. */
+@media (max-width: 620px) {
+  .made-row {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "name name"
+      "here there";
+    margin-bottom: 6px;
+  }
+  .made-row > span:nth-child(1) { grid-area: name; color: var(--text); }
+  .made-row > span:nth-child(2) { grid-area: here; }
+  .made-row > span:nth-child(3) { grid-area: there; }
+  .made-row > span:nth-child(2), .made-row > span:nth-child(3) {
+    min-width: 0; text-align: left; padding-left: 8px;
+  }
+
+  /* The heading names no category, so it keeps to the one line it needs. */
+  .made-head { grid-template-areas: "here there"; margin-bottom: 4px; }
+  .made-head > span:nth-child(1) { display: none; }
+}
 /* A seat in the ring is narrow. Ten rows that each wrap onto three lines would
    push the seat over the one below it, so the name gives way instead. */
 .made-row > span:first-child {

@@ -336,7 +336,7 @@ function madeOdds(made, baseline) {
   heading.className = "made-row made-head";
   const blank = document.createElement("span");
   const here = document.createElement("span");
-  here.textContent = "Here";
+  here.textContent = "Red River";
   const there = document.createElement("span");
   there.textContent = "Hold’em";
   heading.append(blank, here, there);
