@@ -7,5 +7,7 @@ venv/
 # Claude Code scratch worktrees (a second checkout of this repo)
 .claude/worktrees/
 
-# Generated overnight by scripts/preflop_chart.py; commit only the completed run.
+# Written by scripts/preflop_chart.py as it walks. Delete these two lines
+# and commit the file once the run says complete.
+web/static/preflop-chart.json
 web/static/preflop-chart.json.part
