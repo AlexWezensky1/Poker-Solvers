@@ -266,6 +266,7 @@ button.ghost:hover { background: var(--panel-2); color: var(--text); }
 .glossary b { color: var(--text); font-weight: 600; }
 
 @media (max-width: 940px) {
+  .players { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
   .deck-panel { flex-direction: column; }
   /* Column flex, so flex-grow works on the vertical axis: the deck has to be
      told to fill the width outright. */
@@ -288,7 +289,7 @@ button.ghost:hover { background: var(--panel-2); color: var(--text); }
    built from comes down together -- cards, gaps, padding -- until two columns
    fit side by side, which is what the grid is asked for here. */
 @media (max-width: 620px) {
-  .players { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .players { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .player { padding: 8px 6px; gap: 5px; }
   .card { width: 26px; height: 33px; font-size: 12px; border-radius: 5px; }
   .holecards { gap: 4px; }

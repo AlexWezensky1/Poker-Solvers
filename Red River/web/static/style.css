@@ -222,16 +222,17 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
 .made-head { color: var(--muted); opacity: 0.75; letter-spacing: 0.04em; }
 .made-head > span { font-size: 9px; text-transform: uppercase; }
 
-/* A seat on a phone is about 150px wide, which is not enough for a category
-   name and two figures side by side -- the names came out as "Royal ..." and
-   "Four O...". The name takes a line of its own there and the two figures
-   share the next one, which reads better than three truncated columns. */
+/* A seat on a phone is not wide enough for a category name and two figures
+   side by side -- the names came out as "Royal ..." and "Four O...". The row
+   unstacks into a single column instead: the category, then this game's
+   figure, then the Hold'em baseline under it, in heading order. */
 @media (max-width: 620px) {
   .made-row {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     grid-template-areas:
-      "name name"
-      "here there";
+      "name"
+      "here"
+      "there";
     margin-bottom: 6px;
   }
   .made-row > span:nth-child(1) { grid-area: name; color: var(--text); }
@@ -241,8 +242,13 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
     min-width: 0; text-align: left; padding-left: 8px;
   }
 
-  /* The heading names no category, so it keeps to the one line it needs. */
-  .made-head { grid-template-areas: "here there"; margin-bottom: 4px; }
+  /* The heading names no category, so it drops the blank and stacks the two
+     names in the order their figures appear below. */
+  .made-head {
+    grid-template-columns: 1fr;
+    grid-template-areas: "here" "there";
+    margin-bottom: 4px;
+  }
   .made-head > span:nth-child(1) { display: none; }
 }
 /* A seat in the ring is narrow. Ten rows that each wrap onto three lines would
@@ -334,10 +340,12 @@ button.ghost:hover { background: var(--panel-2); color: var(--text); }
   .deck { max-width: none; width: 100%; }
   .side { flex-direction: row; align-items: center; width: 100%; }
   
-  .players { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .players { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 }
 
 @media (max-width: 620px) {
+  /* Narrow enough that three across leaves nothing readable: hold it at two. */
+  .players { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .deck { gap: 4px; }
   .deck-card { font-size: 10px; padding: 6px 0; }
   .pip { font-size: 9px; }
