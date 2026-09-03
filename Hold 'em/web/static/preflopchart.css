@@ -1,0 +1,123 @@
+/* Two 13 x 13 charts side by side: pick your hand on the left, watch every
+   opponent light up on the right by how well it does against yours. On a
+   phone they stack. */
+
+.blurb { max-width: 62em; color: var(--muted); margin: 0 0 20px; font-size: 12px; }
+
+.notice {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  color: var(--muted);
+  text-align: center;
+}
+.notice code {
+  background: var(--panel-2);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 11px;
+}
+
+.chart-content { display: flex; flex-direction: column; gap: 18px; }
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.chart-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+.chart-panel h2 {
+  margin: 0 0 10px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.opp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.opp-head h2 { margin: 0; }
+
+.range-picker { display: flex; gap: 4px; flex-wrap: wrap; }
+.range-btn {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font);
+}
+.range-btn:hover { background: var(--panel-2); color: var(--text); }
+.range-btn.on {
+  background: rgba(63, 178, 127, 0.12);
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* The 13 x 13 chart itself. Suits above the diagonal, offsuits below,
+   pairs down the middle -- the layout every poker chart uses. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(13, 1fr);
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.grid .cell {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font);
+  transition: transform 0.08s;
+}
+.grid .cell:hover { transform: scale(1.06); z-index: 1; }
+.grid .cell .label { font-size: 10px; }
+.grid .cell .val { font-size: 9px; color: var(--muted); font-weight: 400; }
+.grid .cell.pair { outline: 1px solid rgba(63, 178, 127, 0.35); outline-offset: -1px; }
+.grid .cell.picked { outline: 2px solid var(--accent); outline-offset: -1px; z-index: 2; }
+.grid .cell.in-range { border-color: var(--accent-dim); }
+.grid .cell.absent { opacity: 0.25; cursor: default; }
+.grid .cell.absent:hover { transform: none; }
+
+.result {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.picked { color: var(--muted); font-size: 12px; }
+.answer { font-size: 28px; font-weight: 600; letter-spacing: -0.01em; }
+.answer .against { color: var(--muted); font-size: 12px; font-weight: 400; }
+
+.progress { color: var(--muted); font-size: 10px; text-align: center; margin: 0; }

@@ -6,3 +6,6 @@ venv/
 
 # Claude Code scratch worktrees (a second checkout of this repo)
 .claude/worktrees/
+
+# Generated overnight by scripts/preflop_chart.py; commit only the completed run.
+web/static/preflop-chart.json.part

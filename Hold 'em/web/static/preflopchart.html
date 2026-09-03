@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preflop Chart</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="preflopchart.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>Preflop Chart</h1>
+    <nav class="elsewhere">
+      <a href="/holdem/">Solver</a>
+      <a href="/noah/">Noah&rsquo;s Ark</a>
+      <a href="/redriver/">Red River</a>
+      <a href="/hmrds/">HMRDS</a>
+      <a href="/">Home</a>
+    </nav>
+  </header>
+
+  <p class="blurb">
+    Every one of the 169 starting hands walked exactly against every other,
+    over 1,712,304 preflop runouts each. Click a hand to make it yours, then
+    pick a range of opponent hands to see the aggregate equity.
+  </p>
+
+  <section id="loading" class="notice">Loading chart&hellip;</section>
+  <section id="missing" class="notice" hidden>
+    The chart file has not been computed yet.
+    Run <code>python scripts/preflop_chart.py</code> to build it.
+  </section>
+
+  <section id="content" class="chart-content" hidden>
+    <div class="charts">
+      <div class="chart-panel">
+        <h2>Your hand</h2>
+        <div id="hero-grid" class="grid"></div>
+      </div>
+
+      <div class="chart-panel">
+        <div class="opp-head">
+          <h2>Opponent, by range</h2>
+          <div id="range-picker" class="range-picker"></div>
+        </div>
+        <div id="opp-grid" class="grid"></div>
+      </div>
+    </div>
+
+    <div class="result">
+      <div id="picked" class="picked">Pick a hand from the grid on the left.</div>
+      <div id="answer" class="answer"></div>
+    </div>
+
+    <p id="progress" class="progress"></p>
+  </section>
+</main>
+<script src="preflopchart.js"></script>
+</body>
+</html>

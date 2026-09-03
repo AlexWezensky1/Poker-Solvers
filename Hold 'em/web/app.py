@@ -9,7 +9,7 @@ from time import perf_counter
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -107,6 +107,13 @@ def calculate(request: EquityRequest):
             for hand in report.hands
         ],
     )
+
+
+@app.get("/holdem/preflopchart", include_in_schema=False)
+def preflopchart():
+    """One page with its own URL, but no trailing slash and no .html; the
+    static mount would not resolve either on its own."""
+    return FileResponse(STATIC_DIR / "preflopchart.html")
 
 
 @app.get("/", include_in_schema=False)
