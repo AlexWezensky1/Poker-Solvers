@@ -148,6 +148,9 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
    taller to scroll. */
 .players {
   display: grid;
+  /* Each seat keeps its own height. Without this a seat with its showdown
+     table open stretches the one beside it to match and leaves it hollow. */
+  align-items: start;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 8px;
   width: 100%;
@@ -215,7 +218,7 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
   color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums;
 }
 .made-row > span:nth-child(2), .made-row > span:nth-child(3) {
-  min-width: 42px; text-align: right;
+  min-width: 42px; text-align: right; white-space: nowrap;
 }
 /* The baseline is the quieter of the two: this game's own number leads. */
 .made-base { opacity: 0.62; }
@@ -223,16 +226,15 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
 .made-head > span { font-size: 9px; text-transform: uppercase; }
 
 /* A seat on a phone is not wide enough for a category name and two figures
-   side by side -- the names came out as "Royal ..." and "Four O...". The row
-   unstacks into a single column instead: the category, then this game's
-   figure, then the Hold'em baseline under it, in heading order. */
+   side by side -- the names came out as "Royal ..." and "Four O...". The name
+   takes a line of its own here, but the two figures never part company: they
+   stay on one line together at every width. */
 @media (max-width: 620px) {
   .made-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
     grid-template-areas:
-      "name"
-      "here"
-      "there";
+      "name name"
+      "here there";
     margin-bottom: 6px;
   }
   .made-row > span:nth-child(1) { grid-area: name; color: var(--text); }
@@ -242,13 +244,8 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
     min-width: 0; text-align: left; padding-left: 8px;
   }
 
-  /* The heading names no category, so it drops the blank and stacks the two
-     names in the order their figures appear below. */
-  .made-head {
-    grid-template-columns: 1fr;
-    grid-template-areas: "here" "there";
-    margin-bottom: 4px;
-  }
+  /* The heading names no category, so it keeps to the one line it needs. */
+  .made-head { grid-template-areas: "here there"; margin-bottom: 4px; }
   .made-head > span:nth-child(1) { display: none; }
 }
 /* A seat in the ring is narrow. Ten rows that each wrap onto three lines would

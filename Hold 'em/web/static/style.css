@@ -145,6 +145,9 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
    taller to scroll. */
 .players {
   display: grid;
+  /* Each seat keeps its own height. Without this a seat with its showdown
+     table open stretches the one beside it to match and leaves it hollow. */
+  align-items: start;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 8px;
   width: 100%;

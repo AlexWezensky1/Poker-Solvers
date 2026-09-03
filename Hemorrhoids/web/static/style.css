@@ -121,6 +121,9 @@ h1 { margin: 0; font-size: 21px; letter-spacing: -0.01em; }
    as a grid that reflows on its own. */
 .players {
   display: grid;
+  /* Each seat keeps its own height. Without this a seat with its showdown
+     table open stretches the one beside it to match and leaves it hollow. */
+  align-items: start;
   grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
   gap: 10px;
 }
