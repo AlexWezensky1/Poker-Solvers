@@ -206,9 +206,7 @@ function buildSeat(seat) {
       // sitting in a seat nobody is playing. Folding is what keeps them.
       const player = players[seat];
       player.inputs.forEach((input) => setCard(input, ""));
-      player.folded = false;
-      player.fold.textContent = "Fold";
-      player.fold.classList.remove("on");
+      setFolded(player, false);
     }
     buildFillOrder();
     refresh();  // enables or disables the slots, so it has to run first
@@ -236,9 +234,7 @@ function buildSeat(seat) {
   fold.textContent = "Fold";
   fold.addEventListener("click", () => {
     const seatState = players[seat];
-    seatState.folded = !seatState.folded;
-    fold.textContent = seatState.folded ? "Folded" : "Fold";
-    fold.classList.toggle("on", seatState.folded);
+    setFolded(seatState, !seatState.folded);
     buildFillOrder();
     refresh();
     if (seatState.folded) setActive(nextEmpty(-1) || fillOrder[0]);
@@ -340,6 +336,7 @@ function refresh() {
 
   deckButtons.forEach((button, card) => button.classList.toggle("used", seen.has(card)));
 
+  rememberTable();
   clearResults();
   autoCalculate();
 }
@@ -512,12 +509,81 @@ async function run(input) {
   }
 }
 
-function clearAll() {
-  players.forEach((player) => {
-    player.folded = false;
-    player.fold.textContent = "Fold";
-    player.fold.classList.remove("on");
+/* ---------- the table in the address bar ---------- */
+
+// Everything on the table as a query string, so a spot can be linked to and
+// come back the same. A seat in the pot is a `ranges`, a seat that folded is a
+// `dead` -- one entry per hand either way, which is what lets the folded cards
+// go back into the seat they came out of rather than arriving as a loose pile.
+// A seat checked in but not yet dealt is an empty `ranges`, which is a real
+// state here: five unknown cards still count against everybody else.
+function tableQuery() {
+  const params = new URLSearchParams();
+  players.forEach((player, seat) => {
+    const cards = player.inputs.map(cardOf).filter(Boolean).join("");
+    if (inHand(seat)) params.append("ranges", cards);
+    else if (isDealt(seat)) params.append("dead", cards);
   });
+  const board = boardInputs.map(cardOf).filter(Boolean).join("");
+  if (board) params.set("board", board);
+  return params.toString();
+}
+
+// replaceState, not pushState: dealing a card is not a page the back button
+// should have to walk back through one at a time.
+function rememberTable() {
+  const query = tableQuery();
+  history.replaceState(null, "", query ? "?" + query : location.pathname);
+}
+
+// "8h7c2h" -> ["8h", "7c", "2h"], dropping anything that is not a card. The
+// address bar is the one input here that somebody else may have written.
+function readCards(text) {
+  return (text.match(/../g) || []).filter(isCard);
+}
+
+function setFolded(player, folded) {
+  player.folded = folded;
+  player.fold.textContent = folded ? "Folded" : "Fold";
+  player.fold.classList.toggle("on", folded);
+}
+
+function restoreTable() {
+  const params = new URLSearchParams(location.search);
+  const live = params.getAll("ranges");
+  const folded = params.getAll("dead");
+  const board = readCards(params.get("board") || "");
+  if (!live.length && !folded.length && !board.length) return false;
+
+  let next = 0;
+  const fill = (text, isFolded) => {
+    if (next >= players.length) return;
+    const player = players[next++];
+    player.box.checked = true;
+    setFolded(player, isFolded);
+    const slots = player.inputs;
+    readCards(text).slice(0, slots.length)
+      .forEach((card, i) => setCard(slots[i], card));
+  };
+  live.forEach((text) => fill(text, false));
+  folded.forEach((text) => fill(text, true));
+
+  // Seats the link did not name are not playing. Seat 1 always is.
+  for (let seat = next; seat < players.length; seat++) {
+    players[seat].box.checked = seat === 0;
+    setFolded(players[seat], false);
+    players[seat].inputs.forEach((slot) => setCard(slot, ""));
+  }
+  players[0].box.checked = true;
+
+  board.slice(0, boardInputs.length)
+    .forEach((card, i) => setCard(boardInputs[i], card));
+  buildFillOrder();
+  return true;
+}
+
+function clearAll() {
+  players.forEach((player) => setFolded(player, false));
   buildFillOrder();
   allInputs.forEach((input) => setCard(input, ""));
   refresh();
@@ -542,8 +608,9 @@ for (const button of speedEl.querySelectorAll(".seg")) {
 }
 
 clearBtn.addEventListener("click", clearAll);
-// Nothing has happened yet, but the seats nobody has checked still have to be
-// shut before the first click rather than after it.
+// A shared link arrives with the table already in it; and either way the seats
+// nobody has checked have to be shut before the first click rather than after.
+restoreTable();
 refresh();
 setStatus("");
-setActive(fillOrder[0]);
+setActive(nextEmpty(-1) || fillOrder[0]);

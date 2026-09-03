@@ -212,6 +212,7 @@ function refresh() {
 
   deckButtons.forEach((button, card) => button.classList.toggle("used", seen.has(card)));
 
+  rememberTable();
   clearResults();
   autoCalculate();
 }
@@ -382,6 +383,51 @@ async function run(input) {
   }
 }
 
+/* ---------- the table in the address bar ---------- */
+
+// Everything dealt, as a query string, so a spot can be linked to and come back
+// the same. Cards travel in their canonical "As" form -- the pips are only ever
+// for the screen -- and a seat with nothing in it is left out entirely.
+function tableQuery() {
+  const params = new URLSearchParams();
+  for (const player of players) {
+    const cards = player.inputs.map(cardOf).filter(Boolean).join("");
+    if (cards) params.append("ranges", cards);
+  }
+  const board = boardInputs.map(cardOf).filter(Boolean).join("");
+  if (board) params.set("board", board);
+  return params.toString();
+}
+
+// replaceState, not pushState: dealing a card is not a page the back button
+// should have to walk back through one at a time.
+function rememberTable() {
+  const query = tableQuery();
+  history.replaceState(null, "", query ? "?" + query : location.pathname);
+}
+
+// "8h7c2h" -> ["8h", "7c", "2h"], dropping anything that is not a card. The
+// address bar is the one input here that somebody else may have written.
+function readCards(text) {
+  return (text.match(/../g) || []).filter(isCard);
+}
+
+function restoreTable() {
+  const params = new URLSearchParams(location.search);
+  const hands = params.getAll("ranges");
+  const board = readCards(params.get("board") || "");
+  if (!hands.length && !board.length) return false;
+
+  hands.slice(0, players.length).forEach((text, seat) => {
+    const slots = players[seat].inputs;
+    readCards(text).slice(0, slots.length)
+      .forEach((card, i) => setCard(slots[i], card));
+  });
+  board.slice(0, boardInputs.length)
+    .forEach((card, i) => setCard(boardInputs[i], card));
+  return true;
+}
+
 function clearAll() {
   allInputs.forEach((input) => setCard(input, ""));
   refresh();
@@ -406,5 +452,9 @@ for (const button of speedEl.querySelectorAll(".seg")) {
 }
 
 clearBtn.addEventListener("click", clearAll);
+
+// A shared link arrives with the table already in it.
+restoreTable();
+refresh();
 setStatus("");
-setActive(allInputs[0]);
+setActive(nextEmpty(-1) || allInputs[0]);
