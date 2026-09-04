@@ -9,7 +9,7 @@ from time import perf_counter
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -119,6 +119,13 @@ def calculate(request: EquityRequest):
             for hand in report.hands
         ],
     )
+
+
+@app.get("/hmrds/range", include_in_schema=False)
+def range_chart():
+    """The showdown chart. Named on its own because a bare path under the
+    static mount would not resolve either on its own."""
+    return FileResponse(STATIC_DIR / "range.html")
 
 
 @app.get("/", include_in_schema=False)

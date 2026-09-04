@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Showdown Chart</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="range.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>Showdown Chart</h1>
+    <nav class="elsewhere">
+      <a href="/hmrds/">Solver</a>
+      <a href="/holdem/">Hold&rsquo;em</a>
+      <a href="/noah/">Noah&rsquo;s Ark</a>
+      <a href="/redriver/">Red River</a>
+      <a href="/">Home</a>
+    </nav>
+  </header>
+
+  <p class="blurb">
+    Five card hands read by their highest card. Suits mean nothing in HMRDS and
+    the order inside a hand means nothing either, so a hand is just five ranks:
+    6,175 of them, and 19,062,225 ways to pair two up. Each matchup below was
+    walked exactly, over every runout of the ten card board. Which pairs get
+    walked is sampled, evenly across the grid, because walking all of them
+    would take about 168 days.
+  </p>
+
+  <section id="loading" class="notice">Loading chart&hellip;</section>
+  <section id="missing" class="notice" hidden>
+    The chart has not been walked yet.
+    Run <code>python scripts/showdown_chart.py</code> to build it.
+  </section>
+
+  <section id="content" hidden>
+    <div class="chart-panel">
+      <div class="axis-note">
+        <span>Row: your highest card</span>
+        <span>Column: theirs</span>
+      </div>
+      <div id="grid" class="grid"></div>
+    </div>
+
+    <div class="legend">
+      <span>0%</span>
+      <div class="ramp"></div>
+      <span>100%</span>
+    </div>
+
+    <div id="picked" class="picked">Hover a cell for the matchups behind it.</div>
+    <p id="progress" class="progress"></p>
+  </section>
+</main>
+<script src="range.js"></script>
+</body>
+</html>

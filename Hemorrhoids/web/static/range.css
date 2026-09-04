@@ -1,0 +1,80 @@
+/* The showdown grid: thirteen ranks down, thirteen across, a cell for every
+   pairing of highest cards. A cell is an average over many exact matchups, so
+   it carries how many went into it as well as the figure itself. */
+
+main { max-width: 720px; }
+
+.blurb { color: var(--muted); font-size: 12px; margin: 8px 0 20px; max-width: 62ch; }
+
+.notice {
+  color: var(--muted); font-size: 12px;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 14px;
+}
+.notice code {
+  background: var(--panel-2); padding: 1px 5px; border-radius: 4px;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 11px;
+}
+
+.chart-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.axis-note {
+  display: flex; justify-content: space-between;
+  color: var(--muted); font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+
+/* Fourteen tracks: a header column of rank labels, then the thirteen cells. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.head {
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted); font-size: 10px; font-weight: 600;
+}
+
+.cell {
+  aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 3px;
+  font-size: 9px;
+  color: var(--text);
+  background: var(--panel-2);
+  cursor: default;
+}
+/* A cell nothing could be dealt into: no hand is topped by a deuce, and the
+   low corners run out of compatible pairs almost at once. */
+.cell.blank { background: transparent; border: 1px dashed var(--line); }
+.cell:hover { outline: 1px solid var(--accent); }
+
+.legend {
+  display: flex; align-items: center; gap: 8px;
+  color: var(--muted); font-size: 10px;
+  margin: 12px 0 0;
+}
+.ramp {
+  flex: 1 1 auto; height: 6px; border-radius: 3px;
+  background: linear-gradient(to right, var(--bad), var(--panel-2), var(--accent));
+}
+
+.picked {
+  margin-top: 14px; color: var(--muted); font-size: 12px; min-height: 34px;
+}
+.picked strong { color: var(--text); font-weight: 600; }
+
+.progress { color: var(--muted); font-size: 11px; margin-top: 10px; }
+
+@media (max-width: 620px) {
+  .cell { font-size: 7px; }
+  .head { font-size: 8px; }
+}
