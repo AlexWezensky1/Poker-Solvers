@@ -88,10 +88,17 @@ function shade(pct) {
 function summary(data) {
   const walked = data.matchups.toLocaleString();
   const hours = (data.seconds / 3600).toFixed(1);
-  const state = data.complete
-    ? "The walk is complete."
-    : "Still walking; the figures settle as it goes.";
-  return state + " " + walked + " matchups walked exactly, in " + hours +
+  if (data.complete) {
+    return "Every pair walked: " + walked + " matchups, in " + hours +
+      " hours of machine time.";
+  }
+  const of = data.pairs_total
+    ? " of the " + data.pairs_total.toLocaleString() + " possible"
+    : "";
+  const state = data.finished
+    ? "The run has stopped. "
+    : "Still walking; the figures settle as it goes. ";
+  return state + walked + of + " matchups walked exactly, in " + hours +
     " hours of machine time.";
 }
 

@@ -1,0 +1,600 @@
+{
+  "version": 1,
+  "game": "HMRDS",
+  "ranks": [
+    "A",
+    "K",
+    "Q",
+    "J",
+    "T",
+    "9",
+    "8",
+    "7",
+    "6",
+    "5",
+    "4",
+    "3",
+    "2"
+  ],
+  "grid": {
+    "AA": {
+      "equity": 50.0,
+      "matchups": 13826
+    },
+    "AK": {
+      "equity": 57.187,
+      "matchups": 13826
+    },
+    "AQ": {
+      "equity": 56.9589,
+      "matchups": 13826
+    },
+    "AJ": {
+      "equity": 56.1738,
+      "matchups": 13826
+    },
+    "AT": {
+      "equity": 55.6272,
+      "matchups": 13826
+    },
+    "A9": {
+      "equity": 54.6354,
+      "matchups": 13826
+    },
+    "A8": {
+      "equity": 53.5971,
+      "matchups": 13826
+    },
+    "A7": {
+      "equity": 52.0626,
+      "matchups": 13826
+    },
+    "A6": {
+      "equity": 49.7719,
+      "matchups": 13826
+    },
+    "A5": {
+      "equity": 46.3771,
+      "matchups": 13826
+    },
+    "A4": {
+      "equity": 41.2988,
+      "matchups": 13826
+    },
+    "A3": {
+      "equity": 32.7358,
+      "matchups": 6070
+    },
+    "KA": {
+      "equity": 42.813,
+      "matchups": 13826
+    },
+    "KK": {
+      "equity": 50.0,
+      "matchups": 13826
+    },
+    "KQ": {
+      "equity": 49.5196,
+      "matchups": 13826
+    },
+    "KJ": {
+      "equity": 49.1149,
+      "matchups": 13826
+    },
+    "KT": {
+      "equity": 48.4221,
+      "matchups": 13826
+    },
+    "K9": {
+      "equity": 47.6289,
+      "matchups": 13826
+    },
+    "K8": {
+      "equity": 46.4549,
+      "matchups": 13826
+    },
+    "K7": {
+      "equity": 45.367,
+      "matchups": 13826
+    },
+    "K6": {
+      "equity": 43.5739,
+      "matchups": 13826
+    },
+    "K5": {
+      "equity": 40.7824,
+      "matchups": 13826
+    },
+    "K4": {
+      "equity": 36.6468,
+      "matchups": 13826
+    },
+    "K3": {
+      "equity": 29.6654,
+      "matchups": 4484
+    },
+    "QA": {
+      "equity": 43.0411,
+      "matchups": 13826
+    },
+    "QK": {
+      "equity": 50.4804,
+      "matchups": 13826
+    },
+    "QQ": {
+      "equity": 50.0,
+      "matchups": 13826
+    },
+    "QJ": {
+      "equity": 49.4685,
+      "matchups": 13826
+    },
+    "QT": {
+      "equity": 48.8735,
+      "matchups": 13826
+    },
+    "Q9": {
+      "equity": 47.9067,
+      "matchups": 13826
+    },
+    "Q8": {
+      "equity": 47.0806,
+      "matchups": 13826
+    },
+    "Q7": {
+      "equity": 45.4887,
+      "matchups": 13826
+    },
+    "Q6": {
+      "equity": 43.8419,
+      "matchups": 13826
+    },
+    "Q5": {
+      "equity": 41.1301,
+      "matchups": 13826
+    },
+    "Q4": {
+      "equity": 36.9451,
+      "matchups": 12089
+    },
+    "Q3": {
+      "equity": 29.8617,
+      "matchups": 3234
+    },
+    "JA": {
+      "equity": 43.8262,
+      "matchups": 13826
+    },
+    "JK": {
+      "equity": 50.8851,
+      "matchups": 13826
+    },
+    "JQ": {
+      "equity": 50.5315,
+      "matchups": 13826
+    },
+    "JJ": {
+      "equity": 50.0,
+      "matchups": 13826
+    },
+    "JT": {
+      "equity": 49.271,
+      "matchups": 13826
+    },
+    "J9": {
+      "equity": 48.5836,
+      "matchups": 13826
+    },
+    "J8": {
+      "equity": 47.4906,
+      "matchups": 13826
+    },
+    "J7": {
+      "equity": 46.1267,
+      "matchups": 13826
+    },
+    "J6": {
+      "equity": 44.1949,
+      "matchups": 13826
+    },
+    "J5": {
+      "equity": 41.4607,
+      "matchups": 13826
+    },
+    "J4": {
+      "equity": 37.2736,
+      "matchups": 8430
+    },
+    "J3": {
+      "equity": 30.0935,
+      "matchups": 2232
+    },
+    "TA": {
+      "equity": 44.3728,
+      "matchups": 13826
+    },
+    "TK": {
+      "equity": 51.5779,
+      "matchups": 13826
+    },
+    "TQ": {
+      "equity": 51.1265,
+      "matchups": 13826
+    },
+    "TJ": {
+      "equity": 50.729,
+      "matchups": 13826
+    },
+    "TT": {
+      "equity": 50.0,
+      "matchups": 13826
+    },
+    "T9": {
+      "equity": 49.1577,
+      "matchups": 13826
+    },
+    "T8": {
+      "equity": 47.9668,
+      "matchups": 13826
+    },
+    "T7": {
+      "equity": 46.7368,
+      "matchups": 13826
+    },
+    "T6": {
+      "equity": 44.8468,
+      "matchups": 13826
+    },
+    "T5": {
+      "equity": 42.003,
+      "matchups": 13821
+    },
+    "T4": {
+      "equity": 37.7456,
+      "matchups": 5723
+    },
+    "T3": {
+      "equity": 30.4113,
+      "matchups": 1512
+    },
+    "9A": {
+      "equity": 45.3646,
+      "matchups": 13826
+    },
+    "9K": {
+      "equity": 52.3711,
+      "matchups": 13826
+    },
+    "9Q": {
+      "equity": 52.0933,
+      "matchups": 13826
+    },
+    "9J": {
+      "equity": 51.4164,
+      "matchups": 13826
+    },
+    "9T": {
+      "equity": 50.8423,
+      "matchups": 13826
+    },
+    "99": {
+      "equity": 50.0,
+      "matchups": 13826
+    },
+    "98": {
+      "equity": 48.9314,
+      "matchups": 13826
+    },
+    "97": {
+      "equity": 47.488,
+      "matchups": 13826
+    },
+    "96": {
+      "equity": 45.5974,
+      "matchups": 13826
+    },
+    "95": {
+      "equity": 42.7655,
+      "matchups": 9350
+    },
+    "94": {
+      "equity": 38.3469,
+      "matchups": 3711
+    },
+    "93": {
+      "equity": 30.8019,
+      "matchups": 973
+    },
+    "8A": {
+      "equity": 46.4029,
+      "matchups": 13826
+    },
+    "8K": {
+      "equity": 53.5451,
+      "matchups": 13826
+    },
+    "8Q": {
+      "equity": 52.9194,
+      "matchups": 13826
+    },
+    "8J": {
+      "equity": 52.5094,
+      "matchups": 13826
+    },
+    "8T": {
+      "equity": 52.0332,
+      "matchups": 13826
+    },
+    "89": {
+      "equity": 51.0686,
+      "matchups": 13826
+    },
+    "88": {
+      "equity": 50.0,
+      "matchups": 13826
+    },
+    "87": {
+      "equity": 48.4598,
+      "matchups": 13826
+    },
+    "86": {
+      "equity": 46.5936,
+      "matchups": 12143
+    },
+    "85": {
+      "equity": 43.7074,
+      "matchups": 5857
+    },
+    "84": {
+      "equity": 39.2836,
+      "matchups": 2264
+    },
+    "83": {
+      "equity": 31.5392,
+      "matchups": 592
+    },
+    "7A": {
+      "equity": 47.9374,
+      "matchups": 13826
+    },
+    "7K": {
+      "equity": 54.633,
+      "matchups": 13826
+    },
+    "7Q": {
+      "equity": 54.5113,
+      "matchups": 13826
+    },
+    "7J": {
+      "equity": 53.8733,
+      "matchups": 13826
+    },
+    "7T": {
+      "equity": 53.2632,
+      "matchups": 13826
+    },
+    "79": {
+      "equity": 52.512,
+      "matchups": 13826
+    },
+    "78": {
+      "equity": 51.5402,
+      "matchups": 13826
+    },
+    "77": {
+      "equity": 50.0,
+      "matchups": 11384
+    },
+    "76": {
+      "equity": 48.0609,
+      "matchups": 6976
+    },
+    "75": {
+      "equity": 45.1148,
+      "matchups": 3323
+    },
+    "74": {
+      "equity": 40.4528,
+      "matchups": 1291
+    },
+    "73": {
+      "equity": 32.444,
+      "matchups": 328
+    },
+    "6A": {
+      "equity": 50.2281,
+      "matchups": 13826
+    },
+    "6K": {
+      "equity": 56.4261,
+      "matchups": 13826
+    },
+    "6Q": {
+      "equity": 56.1581,
+      "matchups": 13826
+    },
+    "6J": {
+      "equity": 55.8051,
+      "matchups": 13826
+    },
+    "6T": {
+      "equity": 55.1532,
+      "matchups": 13826
+    },
+    "69": {
+      "equity": 54.4026,
+      "matchups": 13826
+    },
+    "68": {
+      "equity": 53.4064,
+      "matchups": 12143
+    },
+    "67": {
+      "equity": 51.9391,
+      "matchups": 6976
+    },
+    "66": {
+      "equity": 50.0,
+      "matchups": 2972
+    },
+    "65": {
+      "equity": 47.2246,
+      "matchups": 1695
+    },
+    "64": {
+      "equity": 42.467,
+      "matchups": 655
+    },
+    "63": {
+      "equity": 34.0262,
+      "matchups": 161
+    },
+    "5A": {
+      "equity": 53.6229,
+      "matchups": 13826
+    },
+    "5K": {
+      "equity": 59.2176,
+      "matchups": 13826
+    },
+    "5Q": {
+      "equity": 58.8699,
+      "matchups": 13826
+    },
+    "5J": {
+      "equity": 58.5393,
+      "matchups": 13826
+    },
+    "5T": {
+      "equity": 57.997,
+      "matchups": 13821
+    },
+    "59": {
+      "equity": 57.2345,
+      "matchups": 9350
+    },
+    "58": {
+      "equity": 56.2926,
+      "matchups": 5857
+    },
+    "57": {
+      "equity": 54.8852,
+      "matchups": 3323
+    },
+    "56": {
+      "equity": 52.7754,
+      "matchups": 1695
+    },
+    "55": {
+      "equity": 50.0,
+      "matchups": 540
+    },
+    "54": {
+      "equity": 46.1352,
+      "matchups": 272
+    },
+    "53": {
+      "equity": 37.1438,
+      "matchups": 66
+    },
+    "4A": {
+      "equity": 58.7012,
+      "matchups": 13826
+    },
+    "4K": {
+      "equity": 63.3532,
+      "matchups": 13826
+    },
+    "4Q": {
+      "equity": 63.0549,
+      "matchups": 12089
+    },
+    "4J": {
+      "equity": 62.7264,
+      "matchups": 8430
+    },
+    "4T": {
+      "equity": 62.2544,
+      "matchups": 5723
+    },
+    "49": {
+      "equity": 61.6531,
+      "matchups": 3711
+    },
+    "48": {
+      "equity": 60.7164,
+      "matchups": 2264
+    },
+    "47": {
+      "equity": 59.5472,
+      "matchups": 1291
+    },
+    "46": {
+      "equity": 57.533,
+      "matchups": 655
+    },
+    "45": {
+      "equity": 53.8648,
+      "matchups": 272
+    },
+    "44": {
+      "equity": 50.0,
+      "matchups": 46
+    },
+    "43": {
+      "equity": 46.189,
+      "matchups": 16
+    },
+    "3A": {
+      "equity": 67.2642,
+      "matchups": 6070
+    },
+    "3K": {
+      "equity": 70.3346,
+      "matchups": 4484
+    },
+    "3Q": {
+      "equity": 70.1383,
+      "matchups": 3234
+    },
+    "3J": {
+      "equity": 69.9065,
+      "matchups": 2232
+    },
+    "3T": {
+      "equity": 69.5887,
+      "matchups": 1512
+    },
+    "39": {
+      "equity": 69.1981,
+      "matchups": 973
+    },
+    "38": {
+      "equity": 68.4608,
+      "matchups": 592
+    },
+    "37": {
+      "equity": 67.556,
+      "matchups": 328
+    },
+    "36": {
+      "equity": 65.9738,
+      "matchups": 161
+    },
+    "35": {
+      "equity": 62.8562,
+      "matchups": 66
+    },
+    "34": {
+      "equity": 53.811,
+      "matchups": 16
+    }
+  },
+  "matchups": 716170,
+  "pairs_total": 19062225,
+  "complete": false,
+  "started": 1788530153.9660156,
+  "updated": 1788573361.1513438,
+  "seconds": 43207.2,
+  "finished": true
+}

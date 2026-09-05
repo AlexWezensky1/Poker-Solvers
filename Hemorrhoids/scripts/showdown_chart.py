@@ -124,7 +124,7 @@ class Chart:
         self.counts[col][row] += 1
         self.matchups += 1
 
-    def payload(self, complete=False):
+    def payload(self, complete=False, finished=False):
         grid = {}
         for row in range(13):
             for col in range(13):
@@ -141,16 +141,20 @@ class Chart:
             "ranks": list(RANKS),
             "grid": grid,
             "matchups": self.matchups,
-            "pairs_total": None,
+            "pairs_total": 19062225,
+            # complete: every pair walked. finished: the run stopped of its own
+            # accord rather than being checkpointed mid-flight. A chart can be
+            # finished without being complete, which is the usual case here.
             "complete": complete,
+            "finished": finished or complete,
             "started": self.started,
             "updated": time.time(),
             "seconds": round(self.seconds, 1),
         }
 
-    def write(self, complete=False):
+    def write(self, complete=False, finished=False):
         PARTIAL.parent.mkdir(parents=True, exist_ok=True)
-        PARTIAL.write_text(json.dumps(self.payload(complete), indent=2),
+        PARTIAL.write_text(json.dumps(self.payload(complete, finished), indent=2),
                            encoding="utf-8")
         os.replace(PARTIAL, OUTPUT)
 
@@ -286,7 +290,7 @@ def main():
                 last_checkpoint = now
 
     chart.seconds += time.time() - begin
-    chart.write()
+    chart.write(finished=True)
     print("wrote %d matchups to %s" % (chart.matchups, OUTPUT), flush=True)
 
 

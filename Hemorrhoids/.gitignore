@@ -7,7 +7,6 @@ venv/
 # Claude Code scratch worktrees (a second checkout of this repo)
 .claude/worktrees/
 
-# scripts/showdown_chart.py writes these as it walks. Commit the chart once the
-# run says complete; the checkpoint it writes through never is.
-web/static/showdown-chart.json
+# scripts/showdown_chart.py checkpoints through this while it walks. The chart
+# it lands on is committed and shipped; the half-written one is not.
 web/static/showdown-chart.json.part
