@@ -21,8 +21,16 @@ const speedEl = document.getElementById("speed");
 // Six community cards is C(48,6) runouts before the flop -- twelve million, too
 // many to walk while somebody waits. Fast lets the server sample those and walk
 // the rest; Precise always walks.
-const FAST_TRIALS = 250000;
-const PRECISE_TRIALS = 1000000;
+// What bounds a run is the clock, not a trial count: five seconds for fast and
+// thirty for precise. The count is whatever fits, and the answer carries how
+// wide it is, so a short budget reports itself as loose rather than quietly
+// returning a rougher number. A walk that will not finish inside its share of
+// the budget is given up on and the rest goes to sampling.
+const FAST_SECONDS = 5;
+const PRECISE_SECONDS = 30;
+
+// A ceiling the clock is expected to reach first.
+const TRIAL_CEILING = 10000000;
 let speed = "fast";
 
 // allInputs is built in dealing order, so it doubles as the fill order:
@@ -411,15 +419,45 @@ function autoCalculate() {
     input = collect();
   } catch (error) {
     latest++;  // strand any answer still in flight for the old table
+    stopCountdown();
     setStatus("");
     return;
   }
   run(input);
 }
 
+function widestMargin(hands) {
+  return hands.reduce((worst, hand) => Math.max(worst, hand.margin || 0), 0);
+}
+
+/* ---------- the budget, counting down ---------- */
+
+let ticking = null;
+
+// The wait is bounded and the bound is known, so show it running out rather
+// than an ellipsis that says nothing about how long is left.
+function startCountdown(budget) {
+  stopCountdown();
+  const ends = performance.now() + budget * 1000;
+  const tick = () => {
+    const left = Math.max(0, (ends - performance.now()) / 1000);
+    setStatus("Calculating… " + left.toFixed(1) + "s");
+  };
+  tick();
+  ticking = setInterval(tick, 100);
+}
+
+function stopCountdown() {
+  if (ticking !== null) {
+    clearInterval(ticking);
+    ticking = null;
+  }
+}
+
 async function run(input) {
   const ticket = ++latest;
-  setStatus("Calculating…");
+  const budget = speed === "precise" ? PRECISE_SECONDS : FAST_SECONDS;
+  startCountdown(budget);
   try {
     const response = await fetch("/noah/api/equity", {
       method: "POST",
@@ -429,11 +467,13 @@ async function run(input) {
         board: input.board.join(""),
         dead: input.dead.join(""),
         mode: speed === "fast" ? "auto" : "exact",
-        trials: speed === "precise" ? PRECISE_TRIALS : FAST_TRIALS,
+        trials: TRIAL_CEILING,
+        seconds: budget,
       }),
     });
     const payload = await response.json();
     if (ticket !== latest) return;
+    stopCountdown();
     if (!response.ok) throw new Error(payload.detail || "Calculation failed.");
 
     render(input.hands, payload.hands);
@@ -444,7 +484,7 @@ async function run(input) {
       const formula = exhaustiveFormula(deck, toCome);
     let how, detail = "";
     if (payload.mode !== "exact") {
-      how = " simulations";
+      how = " simulations, ±" + widestMargin(payload.hands).toFixed(2) + "%";
     } else {
       const noun = payload.trials === 1 ? " runout" : " runouts";
       how = " exhaustive" + noun;
@@ -453,6 +493,7 @@ async function run(input) {
     setStatus(runs + how + " in " + payload.seconds + " seconds", false, detail);
   } catch (error) {
     if (ticket !== latest) return;
+    stopCountdown();
     clearResults();
     setStatus(error.message, true);
   }

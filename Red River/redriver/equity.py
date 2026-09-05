@@ -22,7 +22,8 @@ the walk gives up and samples instead, and the report says which it did.
 import random
 from dataclasses import dataclass, field
 from itertools import combinations
-from math import comb
+from math import comb, sqrt
+from time import perf_counter
 
 from .cards import FULL_DECK, cards_str, check_no_duplicates, is_red
 from .evaluator import BUCKET_NAMES, CARD_KEY, bucket, describe, score_accumulator
@@ -59,6 +60,9 @@ class HandEquity:
     ties: float
     equity: float
     trials: float
+    #: Half-width of the 95% interval on `equity_pct`, in points. Zero when the
+    #: runouts were walked: there is nothing left to be uncertain about.
+    margin: float = 0.0
     best_hand: str = ""
     made: tuple = ()
 
@@ -195,6 +199,23 @@ def _sample(board, deck, rng):
         drawn.append(pool.pop())
 
 
+#: How much of a time budget the walk may spend before it is given up on.
+#: A part-walked enumeration is no answer -- runouts come out in order, so the
+#: part reached is not a fair sample -- so the work is dropped, not reported.
+EXACT_WALK_SHARE = 0.6
+
+
+def _until(runouts, deadline, check=2048):
+    """Yield runouts until the clock passes ``deadline``, then stop."""
+    if deadline is None:
+        yield from runouts
+        return
+    for i, item in enumerate(runouts):
+        if not i & (check - 1) and i and perf_counter() >= deadline:
+            return
+        yield item
+
+
 def _tally(hands, board, runouts):
     """Score every runout, each weighted by how likely it is."""
     n = len(hands)
@@ -205,6 +226,7 @@ def _tally(hands, board, runouts):
     wins = [0.0] * n
     ties = [0.0] * n
     equity = [0.0] * n
+    equity2 = [0.0] * n   # weighted sum of squared shares, for the error
     made = [[0.0] * len(BUCKET_NAMES) for _ in seats]
     weighed = 0.0
     walked = 0
@@ -235,11 +257,14 @@ def _tally(hands, board, runouts):
         if len(winners) == 1:
             wins[winners[0]] += weight
             equity[winners[0]] += weight
+            equity2[winners[0]] += weight
         else:
             share = weight / len(winners)
+            part = 1.0 / len(winners)
             for seat in winners:
                 ties[seat] += weight
                 equity[seat] += share
+                equity2[seat] += weight * part * part
 
     # Runouts that ran out of room take their weight with them, so everything
     # is divided by the weight actually walked rather than by one.
@@ -248,12 +273,13 @@ def _tally(hands, board, runouts):
             wins[seat] /= weighed
             ties[seat] /= weighed
             equity[seat] /= weighed
+            equity2[seat] /= weighed
             made[seat] = [m / weighed for m in made[seat]]
-    return wins, ties, equity, made, walked, last_scores
+    return wins, ties, equity, made, walked, last_scores, equity2
 
 
 def equity(hands, board=(), dead=(), trials=DEFAULT_TRIALS, seed=None,
-           mode="auto", exact_budget=DEFAULT_EXACT_BUDGET):
+           mode="auto", exact_budget=DEFAULT_EXACT_BUDGET, seconds=None):
     """Compute equity for two or more Red River hands.
 
     ``hands`` is a sequence of two-card sequences and ``board`` holds the
@@ -295,17 +321,42 @@ def equity(hands, board=(), dead=(), trials=DEFAULT_TRIALS, seed=None,
         # monte-carlo rather than sitting there counting them.
         mode = "monte-carlo"
 
+    if mode not in ("exact", "monte-carlo"):
+        raise ValueError("unknown mode %r" % mode)
+
+    budget_ends = perf_counter() + seconds if seconds else None
+    pots2 = None
+
     if mode == "exact":
-        draws = _finishes(board, deck)
-    elif mode == "monte-carlo":
+        # The walk gets part of the budget only, so giving up on it still
+        # leaves clock enough to sample rather than return nothing.
+        walk_ends = perf_counter() + seconds * EXACT_WALK_SHARE if seconds else None
+        wins, ties, pots, made, walked, last_scores, pots2 = _tally(
+            hands, board, _until(_finishes(board, deck), walk_ends))
+        if walked < runouts:
+            mode = "monte-carlo"   # cut short, so none of that counts
+
+    if mode == "monte-carlo":
         if trials < 1:
             raise ValueError("trials must be at least 1")
         rng = random.Random(seed)
-        draws = ((_sample(board, deck, rng), 1.0) for _ in range(trials))
-    else:
-        raise ValueError("unknown mode %r" % mode)
+        left = budget_ends - perf_counter() if budget_ends else None
+        if left is not None and left <= 0:
+            left = 0.01    # the walk overran; still answer with something
+        deadline = perf_counter() + left if left is not None else None
+        wins, ties, pots, made, walked, last_scores, pots2 = _tally(
+            hands, board,
+            _until(((_sample(board, deck, rng), 1.0) for _ in range(trials)), deadline))
+        if not walked:
+            raise ValueError("no runouts were dealt; the time budget was too short")
 
-    wins, ties, pots, made, walked, last_scores = _tally(hands, board, draws)
+    # Shares here are already means, so the spread is E[s^2] less the square of
+    # the mean; 1.96 standard errors either side, in points of equity.
+    margins = [0.0] * len(hands)
+    if mode == "monte-carlo" and walked > 1:
+        for i in range(len(hands)):
+            spread = max(pots2[i] - pots[i] * pots[i], 0.0)
+            margins[i] = 196.0 * sqrt(spread / walked)
 
     report = EquityReport(board=board, mode=mode, trials=walked)
     for i, hand in enumerate(hands):
@@ -316,6 +367,7 @@ def equity(hands, board=(), dead=(), trials=DEFAULT_TRIALS, seed=None,
             ties=ties[i],
             equity=pots[i],
             trials=walked,
+            margin=margins[i],
             made=tuple(made[i]),
             # Only meaningful once the board has actually finished, where the
             # one runout walked is the real one.
@@ -330,7 +382,8 @@ HOLDEM_BOARD = 5
 
 
 def holdem_made(hands, board=(), dead=(), trials=DEFAULT_TRIALS, seed=None,
-                mode="auto", exact_budget=DEFAULT_EXACT_BUDGET):
+                mode="auto", exact_budget=DEFAULT_EXACT_BUDGET,
+                seconds=None):
     """How often each hand ends in each category under ordinary Hold'em rules.
 
     Same hole cards and the same board so far, but the board stops at five
@@ -360,11 +413,13 @@ def holdem_made(hands, board=(), dead=(), trials=DEFAULT_TRIALS, seed=None,
     elif mode == "exact" and work > EXACT_CEILING:
         mode = "monte-carlo"
 
+    deadline = perf_counter() + seconds if seconds else None
     if mode == "exact":
-        draws = combinations(deck, needed)
+        draws = _until(combinations(deck, needed), deadline)
     else:
         rng = random.Random(seed)
-        draws = (rng.sample(deck, needed) for _ in range(max(int(trials), 1)))
+        draws = _until((rng.sample(deck, needed) for _ in range(max(int(trials), 1))),
+                       deadline)
 
     seats = range(len(hands))
     hole_accs = [CARD_KEY[a] + CARD_KEY[b] for a, b in hands]

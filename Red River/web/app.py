@@ -20,7 +20,15 @@ from redriver.equity import DEFAULT_TRIALS, MAX_PLAYERS, equity, holdem_made
 #: A ceiling rather than a budget: it stops a hand-written request asking for a
 #: run that never comes back. Precise asks for the million when the walk is not
 #: on offer, which is the only time anything asks for this much.
-MAX_TRIALS = 1_000_000
+MAX_TRIALS = 10_000_000
+
+#: The longest a caller may ask to be kept waiting.
+MAX_SECONDS = 60.0
+
+#: Two engines answer one request -- the variant's own figures and the Hold'em
+#: ones beside them -- so a budget covers both. The variant's are the answer
+#: being asked for and take the larger share.
+MAIN_SHARE = 0.7
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
@@ -35,6 +43,11 @@ class EquityRequest(BaseModel):
         description="Cards out of the deck but not in any hand still in the pot -- a folded hand's. Not scored, but not dealt to anybody either.",
     )
     trials: int = Field(DEFAULT_TRIALS, ge=1, le=MAX_TRIALS)
+    seconds: float | None = Field(
+        None, gt=0, le=MAX_SECONDS,
+        description="Cap the answer at this many seconds. Trials then act as a "
+                    "ceiling and the answer reports how many it managed.",
+    )
     mode: Literal["auto", "exact"] = Field(
         "exact", description="'auto' samples instead of enumerating when a runout count is large"
     )
@@ -51,6 +64,9 @@ class HandResponse(BaseModel):
     equity: float
     win: float
     tie: float
+    #: Half-width of the 95% interval on `equity`, in points. Zero when every
+    #: runout was walked.
+    margin: float = 0.0
     best_hand: str = ""
     made: list[CategoryOdds] = Field(
         default_factory=list,
@@ -92,10 +108,13 @@ def calculate(request: EquityRequest):
 
         started = perf_counter()
         report = equity(hands, board, dead=dead,
-                        trials=request.trials, mode=request.mode)
+                        trials=request.trials, mode=request.mode,
+                        seconds=request.seconds and request.seconds * MAIN_SHARE)
         # The same deal read as ordinary Hold'em, for the column beside it.
         baseline = holdem_made(hands, board, dead=dead,
-                               trials=request.trials, mode=request.mode)
+                               trials=request.trials, mode=request.mode,
+                               seconds=request.seconds and
+                               request.seconds * (1 - MAIN_SHARE))
         elapsed = perf_counter() - started
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -110,6 +129,7 @@ def calculate(request: EquityRequest):
                 index=hand.index,
                 hand=hand.label,
                 equity=round(hand.equity_pct, 2),
+                margin=round(hand.margin, 3),
                 win=round(hand.win_pct, 2),
                 tie=round(hand.tie_pct, 2),
                 made=[CategoryOdds(name=name, pct=round(pct, 2))
