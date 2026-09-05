@@ -5,16 +5,22 @@
    diagonal, suited hands above it, offsuit hands below.
 
    The left chart is the hero. Click a cell and every cell on the right
-   colours by that hero's equity against it. A range button (top 5 %,
-   top 10 %, ...) picks a subset of opponent hands and shows the weighted
-   average equity of the hero against exactly those hands. Weighting is by
-   combos: pairs are 6 each, suited 4, offsuit 12, so the answer matches
-   what one would get by dealing at random. */
+   colours by that hero's equity against it; hands outside the opponent's
+   range go grey, so the range being averaged over is visible rather than
+   implied.
+
+   Ranges are measured in combinations, never in names. There are 1,326
+   hands you can be dealt: a pair is 6 of them, a suited hand 4, an offsuit
+   hand 12. "Top 10%" therefore means the strongest tenth of those 1,326,
+   which is what a range means at a table, and not the strongest tenth of
+   the 169 names -- those are two different sets, because the names at the
+   top of the ranking are mostly pairs and suited hands and carry the
+   fewest combinations each. */
 
 const RANKS = "AKQJT98765432";
 
 // Hand types in the same order as the chart file. Kept in one place so the
-// three grids -- data, hero, opponent -- always index the same hand.
+// grids -- data, hero, opponent, percentile -- always index the same hand.
 const HAND_ORDER = (() => {
   const list = [];
   for (const r of RANKS) list.push(r + r);
@@ -28,12 +34,15 @@ const HAND_ORDER = (() => {
 })();
 
 // Standard combo counts: a pair has C(4,2) = 6 possible pairings, a suited
-// hand 4 (one per suit), an offsuit 12 (4 * 3). Weighting the averages by
-// these matches the frequency each hand comes up in a real deal.
+// hand 4 (one per suit), an offsuit 12 (4 * 3). Weighting by these matches
+// the frequency each hand actually comes up in a deal.
 function combosOf(label) {
   if (label[0] === label[1]) return 6;
   return label.endsWith("s") ? 4 : 12;
 }
+
+//: 13 * 6 + 78 * 4 + 78 * 12. The whole deal, in combinations.
+const TOTAL_COMBOS = HAND_ORDER.reduce((sum, l) => sum + combosOf(l), 0);
 
 // The 13 x 13 layout: cell (row, col) with row <= col is the "col-row" suited
 // hand (or the pair when row == col), and row > col is the offsuit hand.
@@ -51,19 +60,29 @@ const missingEl = document.getElementById("missing");
 const contentEl = document.getElementById("content");
 const heroEl = document.getElementById("hero-grid");
 const oppEl = document.getElementById("opp-grid");
+const pctEl = document.getElementById("pct-grid");
 const pickerEl = document.getElementById("range-picker");
 const pickedEl = document.getElementById("picked");
 const answerEl = document.getElementById("answer");
 const progressEl = document.getElementById("progress");
+const sliderEl = document.getElementById("range-slider");
+const bandEl = document.getElementById("range-band");
+const loEl = document.getElementById("handle-lo");
+const hiEl = document.getElementById("handle-hi");
+const readoutEl = document.getElementById("range-readout");
 
 let chart = null;      // { hero: { villain: equity, ... }, ... }
 let heroPick = null;   // the label the user has selected as their own hand
-let rangePct = 100;    // top X% of opponent hands, ranked by strength vs random
+let rangeLo = 0;       // the range is a band of the field, in whole percent
+let rangeHi = 100;
 
 const heroCells = new Map();  // label -> cell element
 const oppCells = new Map();
+const pctCells = new Map();
 
-const strengthRank = new Map();  // label -> position, 0 is strongest
+const strengthRank = new Map();   // label -> position, 0 is strongest
+const bandStart = new Map();      // label -> percentile it opens at
+const bandEnd = new Map();        // label -> percentile it closes at
 
 async function load() {
   try {
@@ -82,12 +101,15 @@ async function load() {
   buildRangePicker();
   buildGrid(heroEl, heroCells, onPickHero);
   buildGrid(oppEl, oppCells, null);
+  buildGrid(pctEl, pctCells, onPickHero);
+  wireSlider();
   reportProgress();
-  colourOpponents();
+  refresh();
 }
 
 // Each hand's average equity against every other hand (weighted by combos):
-// that is a hand's overall preflop strength, and it sorts the range picker.
+// that is a hand's overall preflop strength, and it sorts the field. The
+// running total of combos down that order is what a percentile means here.
 function rankByStrength() {
   const scores = [];
   for (const label of HAND_ORDER) {
@@ -105,22 +127,24 @@ function rankByStrength() {
     scores.push([label, weight > 0 ? total / weight : 0]);
   }
   scores.sort((a, b) => b[1] - a[1]);
-  scores.forEach(([label], i) => strengthRank.set(label, i));
+
+  let cumulative = 0;
+  scores.forEach(([label], i) => {
+    strengthRank.set(label, i);
+    bandStart.set(label, 100 * cumulative / TOTAL_COMBOS);
+    cumulative += combosOf(label);
+    bandEnd.set(label, 100 * cumulative / TOTAL_COMBOS);
+  });
 }
 
 function buildRangePicker() {
   for (const pct of RANGE_PERCENTS) {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "range-btn" + (pct === rangePct ? " on" : "");
+    button.className = "range-btn";
+    button.dataset.pct = String(pct);
     button.textContent = "Top " + pct + "%";
-    button.addEventListener("click", () => {
-      rangePct = pct;
-      pickerEl.querySelectorAll(".range-btn")
-        .forEach((b) => b.classList.toggle("on", b === button));
-      updateAnswer();
-      colourOpponents();
-    });
+    button.addEventListener("click", () => setRange(0, pct));
     pickerEl.appendChild(button);
   }
 }
@@ -157,15 +181,10 @@ function onPickHero(label) {
   for (const [name, cell] of heroCells) {
     cell.classList.toggle("picked", name === label);
   }
-  updatePicked();
-  updateAnswer();
-  colourOpponents();
-}
-
-function updatePicked() {
-  pickedEl.textContent = heroPick
-    ? "You hold " + prettyHand(heroPick) + "."
-    : "Pick a hand from the grid on the left.";
+  for (const [name, cell] of pctCells) {
+    cell.classList.toggle("picked", name === label);
+  }
+  refresh();
 }
 
 function prettyHand(label) {
@@ -180,21 +199,50 @@ function rankWord(char) {
   return words[char] || char + "s";
 }
 
-// The set of opponent hands at the current top-X% range, ranked by strength.
+/* ---------- the range ---------- */
+
+// A hand is in range when its slice of the field overlaps the band. Slices are
+// combinations, so a range of "10% to 40%" is 30% of the hands you can be
+// dealt, not 30% of the 169 names.
 function inRange() {
-  const size = Math.round(HAND_ORDER.length * rangePct / 100);
-  return new Set(HAND_ORDER.filter((label) => strengthRank.get(label) < size));
+  return new Set(HAND_ORDER.filter((label) =>
+    bandEnd.get(label) > rangeLo && bandStart.get(label) < rangeHi));
 }
 
-function updateAnswer() {
-  if (!heroPick) { answerEl.textContent = ""; return; }
+function setRange(lo, hi) {
+  rangeLo = Math.max(0, Math.min(100, Math.round(lo)));
+  rangeHi = Math.max(0, Math.min(100, Math.round(hi)));
+  if (rangeLo > rangeHi) [rangeLo, rangeHi] = [rangeHi, rangeLo];
+  refresh();
+}
+
+function refresh() {
   const range = inRange();
+  paintSlider();
+  paintOpponents(range);
+  paintPercentiles(range);
+  updatePicked();
+  updateAnswer(range);
+  for (const button of pickerEl.querySelectorAll(".range-btn")) {
+    const pct = Number(button.dataset.pct);
+    button.classList.toggle("on", rangeLo === 0 && rangeHi === pct);
+  }
+}
+
+function updatePicked() {
+  pickedEl.textContent = heroPick
+    ? "You hold " + prettyHand(heroPick) + "."
+    : "Pick a hand from either grid.";
+}
+
+function updateAnswer(range) {
+  if (!heroPick) { answerEl.textContent = ""; return; }
   const row = chart.grid[heroPick];
   if (!row) { answerEl.textContent = ""; return; }
 
   let total = 0;
   let weight = 0;
-  let cells = 0;
+  let names = 0;
   for (const opponent of range) {
     if (opponent === heroPick) continue;  // exclude the hero from its own range
     const value = row[opponent];
@@ -202,21 +250,32 @@ function updateAnswer() {
     const w = combosOf(opponent);
     total += value * w;
     weight += w;
-    cells++;
+    names++;
   }
   if (!weight) { answerEl.textContent = ""; return; }
-  const pct = total / weight;
-  answerEl.innerHTML = pct.toFixed(2) + "%<span class=\"against\">" +
-    " against top " + rangePct + "% (" + cells + " hands)</span>";
+  answerEl.innerHTML = (total / weight).toFixed(2) + "%" +
+    "<span class=\"against\"> against " + describeRange() + ", " +
+    names + " hands and " + weight.toLocaleString() + " combos</span>";
 }
 
-// Colour every opponent cell by hero's equity against it, and mark which
-// cells sit inside the current range.
-function colourOpponents() {
-  const range = inRange();
+function describeRange() {
+  if (rangeLo === 0 && rangeHi === 100) return "the whole field";
+  if (rangeLo === 0) return "the top " + rangeHi + "%";
+  return rangeLo + "% to " + rangeHi + "%";
+}
+
+/* ---------- painting ---------- */
+
+// Colour every opponent cell by hero's equity against it. Hands outside the
+// range go grey: they are not in the average, so they should not read as if
+// they were.
+function paintOpponents(range) {
   for (const [label, cell] of oppCells) {
     const val = cell.querySelector(".val");
-    cell.classList.toggle("in-range", range.has(label));
+    const inside = range.has(label);
+    cell.classList.toggle("in-range", inside);
+    cell.classList.toggle("out-range", !inside);
+
     if (!heroPick) {
       val.textContent = "";
       cell.style.background = "";
@@ -232,8 +291,27 @@ function colourOpponents() {
     }
     cell.classList.remove("absent");
     val.textContent = value.toFixed(0) + "%";
-    cell.style.background = equityColour(value);
+    cell.style.background = inside ? equityColour(value) : "";
   }
+}
+
+// The percentile grid says where each hand sits in the field, and shades by
+// how much of the selected band it falls inside.
+function paintPercentiles(range) {
+  for (const [label, cell] of pctCells) {
+    const val = cell.querySelector(".val");
+    const inside = range.has(label);
+    val.textContent = formatPercentile(bandEnd.get(label));
+    cell.classList.toggle("in-range", inside);
+    cell.classList.toggle("out-range", !inside);
+    cell.style.background = inside ? percentileColour(bandEnd.get(label)) : "";
+  }
+}
+
+// Under ten percent the first decimal is the whole story -- the top handful of
+// hands all round to the same integer otherwise.
+function formatPercentile(pct) {
+  return pct < 10 ? pct.toFixed(1) : pct.toFixed(0);
 }
 
 // A green-to-red heatmap: 50% is neutral, dominant hands green, dominated red.
@@ -245,6 +323,12 @@ function equityColour(pct) {
   return "rgba(" + r + "," + g + "," + b + ", 0.28)";
 }
 
+// Strongest hands densest; the shade fades as the percentile falls away.
+function percentileColour(pct) {
+  const t = Math.max(0, Math.min(1, 1 - pct / 100));
+  return "rgba(63, 178, 127, " + (0.06 + t * 0.42).toFixed(3) + ")";
+}
+
 function explainOpponent(label) {
   if (!heroPick) { onPickHero(label); return; }
   const value = chart.grid[heroPick][label];
@@ -252,6 +336,83 @@ function explainOpponent(label) {
   answerEl.innerHTML = value.toFixed(2) + "%" +
     "<span class=\"against\"> as " + prettyHand(heroPick) +
     " against " + prettyHand(label) + "</span>";
+}
+
+/* ---------- the band slider ---------- */
+
+function paintSlider() {
+  loEl.style.left = rangeLo + "%";
+  hiEl.style.left = rangeHi + "%";
+  bandEl.style.left = rangeLo + "%";
+  bandEl.style.width = (rangeHi - rangeLo) + "%";
+  loEl.setAttribute("aria-valuenow", String(rangeLo));
+  hiEl.setAttribute("aria-valuenow", String(rangeHi));
+  readoutEl.textContent = rangeLo + "% – " + rangeHi + "%";
+}
+
+function pctFromEvent(event) {
+  const box = sliderEl.getBoundingClientRect();
+  return Math.round(100 * (event.clientX - box.left) / box.width);
+}
+
+function wireSlider() {
+  let dragging = null;   // "lo", "hi" or "band"
+  let grabbedAt = 0;     // where in the band the drag started
+  let bandWidth = 0;
+
+  function move(event) {
+    if (!dragging) return;
+    const at = pctFromEvent(event);
+    if (dragging === "lo") setRange(Math.min(at, rangeHi), rangeHi);
+    else if (dragging === "hi") setRange(rangeLo, Math.max(at, rangeLo));
+    else {
+      // Dragging the band keeps its width and stops at either end.
+      let lo = Math.max(0, Math.min(100 - bandWidth, at - grabbedAt));
+      setRange(lo, lo + bandWidth);
+    }
+  }
+
+  function release() {
+    dragging = null;
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", release);
+  }
+
+  function grab(what) {
+    return (event) => {
+      event.preventDefault();
+      dragging = what;
+      bandWidth = rangeHi - rangeLo;
+      grabbedAt = pctFromEvent(event) - rangeLo;
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", release);
+    };
+  }
+
+  loEl.addEventListener("pointerdown", grab("lo"));
+  hiEl.addEventListener("pointerdown", grab("hi"));
+  bandEl.addEventListener("pointerdown", grab("band"));
+
+  // A click on the bare track brings the nearer handle to it.
+  sliderEl.addEventListener("pointerdown", (event) => {
+    if (event.target !== sliderEl && !event.target.classList.contains("track")) return;
+    const at = pctFromEvent(event);
+    if (Math.abs(at - rangeLo) <= Math.abs(at - rangeHi)) setRange(at, rangeHi);
+    else setRange(rangeLo, at);
+  });
+
+  // Arrow keys nudge a handle a point at a time, which is the whole reason
+  // the scale is in whole percent.
+  for (const [el, which] of [[loEl, "lo"], [hiEl, "hi"]]) {
+    el.addEventListener("keydown", (event) => {
+      const step = event.key === "ArrowLeft" || event.key === "ArrowDown" ? -1
+                 : event.key === "ArrowRight" || event.key === "ArrowUp" ? 1 : 0;
+      if (!step) return;
+      event.preventDefault();
+      if (which === "lo") setRange(Math.min(rangeLo + step, rangeHi), rangeHi);
+      else setRange(rangeLo, Math.max(rangeHi + step, rangeLo));
+    });
+  }
 }
 
 function reportProgress() {

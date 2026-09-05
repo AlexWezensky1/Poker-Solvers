@@ -13,7 +13,7 @@
   <header>
     <h1>Preflop Chart</h1>
     <nav class="elsewhere">
-      <a href="/holdem/">Solver</a>
+      <a href="/holdem/">Hold&rsquo;em</a>
       <a href="/noah/">Noah&rsquo;s Ark</a>
       <a href="/redriver/">Red River</a>
       <a href="/hmrds/">HMRDS</a>
@@ -50,8 +50,34 @@
     </div>
 
     <div class="result">
-      <div id="picked" class="picked">Pick a hand from the grid on the left.</div>
+      <div id="picked" class="picked">Pick a hand from either grid.</div>
       <div id="answer" class="answer"></div>
+    </div>
+
+    <div class="chart-panel percentile-panel">
+      <div class="opp-head">
+        <h2>Where each hand sits</h2>
+        <div id="range-readout" class="range-readout"></div>
+      </div>
+
+      <p class="panel-note">
+        Hands ranked by their equity against the whole field, and measured in
+        combinations rather than in names: of the 1,326 hands you can be dealt a
+        pair is 6, a suited hand 4 and an offsuit hand 12. A cell shows the
+        percentile that hand closes at, so 4.5 means it is inside the top 4.5%.
+        Drag either handle, or the band itself, a percentage point at a time.
+      </p>
+
+      <div id="range-slider" class="slider">
+        <div class="track"></div>
+        <div id="range-band" class="band"></div>
+        <div id="handle-lo" class="handle" tabindex="0" role="slider"
+             aria-label="range starts at" aria-valuemin="0" aria-valuemax="100"></div>
+        <div id="handle-hi" class="handle" tabindex="0" role="slider"
+             aria-label="range ends at" aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
+
+      <div id="pct-grid" class="grid"></div>
     </div>
 
     <p id="progress" class="progress"></p>

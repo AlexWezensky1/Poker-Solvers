@@ -103,6 +103,15 @@
 .grid .cell.pair { outline: 1px solid rgba(63, 178, 127, 0.35); outline-offset: -1px; }
 .grid .cell.picked { outline: 2px solid var(--accent); outline-offset: -1px; z-index: 2; }
 .grid .cell.in-range { border-color: var(--accent-dim); }
+/* Outside the range is outside the average, so it reads as set aside rather
+   than as a hand that merely scored badly. */
+.grid .cell.out-range {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--muted);
+  opacity: 0.45;
+}
+.grid .cell.out-range .val { color: var(--muted); }
 .grid .cell.absent { opacity: 0.25; cursor: default; }
 .grid .cell.absent:hover { transform: none; }
 
@@ -119,5 +128,49 @@
 .picked { color: var(--muted); font-size: 12px; }
 .answer { font-size: 28px; font-weight: 600; letter-spacing: -0.01em; }
 .answer .against { color: var(--muted); font-size: 12px; font-weight: 400; }
+
+/* The percentile chart and the band that selects from it. */
+.panel-note {
+  color: var(--muted); font-size: 11px; line-height: 1.55;
+  margin: 0 0 14px; max-width: 68ch;
+}
+.range-readout {
+  color: var(--accent); font-size: 12px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.slider {
+  position: relative;
+  height: 26px;
+  margin: 0 10px 16px;
+  touch-action: none;   /* the handles own the gesture, not the page */
+}
+.slider .track {
+  position: absolute; top: 50%; left: -10px; right: -10px;
+  height: 4px; margin-top: -2px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+.slider .band {
+  position: absolute; top: 50%;
+  height: 6px; margin-top: -3px;
+  background: rgba(63, 178, 127, 0.55);
+  border-radius: 3px;
+  cursor: grab;
+}
+.slider .band:active { cursor: grabbing; }
+.slider .handle {
+  position: absolute; top: 50%;
+  width: 14px; height: 14px; margin: -7px 0 0 -7px;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  cursor: ew-resize;
+}
+.slider .handle:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+.percentile-panel .grid .cell .val { color: var(--text); font-weight: 600; }
+.percentile-panel .grid .cell.out-range .val { color: var(--muted); font-weight: 400; }
 
 .progress { color: var(--muted); font-size: 10px; text-align: center; margin: 0; }
