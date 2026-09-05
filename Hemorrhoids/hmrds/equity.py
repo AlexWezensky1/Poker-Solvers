@@ -17,7 +17,8 @@ wide to walk.
 
 import random
 from dataclasses import dataclass, field
-from math import comb
+from math import comb, sqrt
+from time import perf_counter
 
 from .cards import (
     BOARD_SIZE, FULL_DECK, HAND_SIZE, RANK_BIT, STREETS,
@@ -40,6 +41,18 @@ DEFAULT_EXACT_BUDGET = 5_000_000
 #: too many ways to deal the unknown for walking them to beat sampling them.
 MAX_HIDDEN_FILLINGS = 1_000
 
+#: How much of a time budget the exact walk may spend before it is abandoned.
+#: What is left goes to sampling. The cost of a walk cannot be read off the
+#: table -- the same estimate covers one that takes fourteen seconds and one
+#: that takes fifty -- so a walk is given a slice of the clock and sampling
+#: keeps the rest to answer with if the walk does not come back in time.
+EXACT_WALK_SHARE = 0.6
+
+
+class _WalkTooLong(Exception):
+    """The exact walk did not finish inside the slice of budget it was given."""
+
+
 
 @dataclass
 class HandEquity:
@@ -52,6 +65,10 @@ class HandEquity:
     highs: float
     lows: float
     trials: float
+    #: Half-width of the 95% interval on `equity_pct`, in points. Zero when
+    #: the runouts were walked rather than sampled: there is nothing to be
+    #: uncertain about once every one of them has been counted.
+    margin: float = 0.0
     held: tuple = ()
     discarded: tuple = ()
     unknown: int = 0
@@ -198,16 +215,28 @@ def _street_draws(avail, bits, need, filler):
     return results
 
 
-def _exact(masks, tables, avail, bits, filler, needs, known_masks):
-    """Exhaust every runout as a memoised walk over live rank counts."""
+def _exact(masks, tables, avail, bits, filler, needs, known_masks, deadline=None):
+    """Exhaust every runout as a memoised walk over live rank counts.
+
+    ``deadline`` abandons the walk if it is still going past that point. The
+    cost of a walk cannot be predicted from the table -- the same estimate
+    covers tables that take fourteen seconds and fifty -- so the only honest
+    bound is the clock itself.
+    """
     n = len(masks)
     memo = {}
+    seen = 0
 
     def fill(street, state, board, spare):
+        nonlocal seen
         key = (street, state)
         cached = memo.get(key)
         if cached is not None:
             return cached
+        if deadline is not None:
+            seen += 1
+            if not seen & 4095 and perf_counter() >= deadline:
+                raise _WalkTooLong
 
         need = needs[street]
         denom = comb(sum(state) + spare, need)
@@ -267,13 +296,22 @@ def _exact(masks, tables, avail, bits, filler, needs, known_masks):
     return fill(0, avail, known_masks[0], filler)
 
 
-def _monte_carlo(known, unknown, deck, hole_pool, needs, known_masks, trials, seed):
+def _monte_carlo(known, unknown, deck, hole_pool, needs, known_masks, trials, seed,
+                 seconds=None):
     """Deal the rest of the board ``trials`` times and settle each runout.
 
     Hands that are only partly known have their missing cards dealt as well,
     out of ``hole_pool`` -- the cards that could still be in somebody's hand.
     Anything the board has already matched would have been discarded face up,
     so it cannot be one of them.
+
+    ``seconds`` caps the wall clock rather than the count: sampling stops at the
+    first check past the budget and reports how many trials it managed. The
+    clock is read every 2,048 trials, which is often enough to land inside a
+    twentieth of a second and rare enough not to show up in the timings.
+
+    Returns the running totals, the sum of squared shares -- which is what the
+    error bars are built from -- and the number of trials actually dealt.
     """
     n = len(known)
     rng = random.Random(seed)
@@ -301,13 +339,19 @@ def _monte_carlo(known, unknown, deck, hole_pool, needs, known_masks, trials, se
     randrange = rng.randrange
 
     pot = [0.0] * n
+    pot2 = [0.0] * n      # sum of squares, for the standard error
     scoops = [0.0] * n
     outs = [0.0] * n
     keeps = [0.0] * n
     highs = [0.0] * n
     lows = [0.0] * n
 
-    for _ in range(trials):
+    deadline = perf_counter() + seconds if seconds else None
+    done = 0
+
+    for done in range(trials):
+        if deadline and not done & 2047 and done and perf_counter() >= deadline:
+            break
         pool = deck
         if hidden:
             for i in range(hidden):
@@ -335,8 +379,10 @@ def _monte_carlo(known, unknown, deck, hole_pool, needs, known_masks, trials, se
 
         share, gone, kept, high, low = resolve(masks, tables, boards)
         for seat in range(n):
-            pot[seat] += share[seat]
-            if share[seat] > 0.999999999:
+            taken = share[seat]
+            pot[seat] += taken
+            pot2[seat] += taken * taken
+            if taken > 0.999999999:
                 scoops[seat] += 1
         for seat in gone:
             outs[seat] += 1
@@ -348,7 +394,10 @@ def _monte_carlo(known, unknown, deck, hole_pool, needs, known_masks, trials, se
             for seat in low:
                 lows[seat] += 1.0 / len(low)
 
-    return pot, scoops, outs, keeps, highs, lows
+    else:
+        done = trials      # the loop ran out rather than the clock
+
+    return pot, scoops, outs, keeps, highs, lows, pot2, done
 
 
 def _rank_multisets(avail, size):
@@ -411,12 +460,16 @@ def _count_fillings(pool, hidden, cap):
     return total
 
 
-def _exact_over_hidden(known_ranks, hidden, pool, deck_ranks, needs, known_masks):
+def _exact_over_hidden(known_ranks, hidden, pool, deck_ranks, needs, known_masks,
+                       deadline=None):
     """Walk every runout for every way the unnamed cards could have been dealt.
 
     Each filling is a table with every hand named, so it is the ordinary walk;
     the answers are averaged over the fillings, weighted by how many card deals
     each one stands for.
+
+    ``deadline`` is checked between fillings as well as inside each walk, since
+    the count of fillings is what makes this long rather than any one of them.
     """
     n = len(known_ranks)
     tally = [[0.0] * n for _ in range(6)]
@@ -425,6 +478,8 @@ def _exact_over_hidden(known_ranks, hidden, pool, deck_ranks, needs, known_masks
     total = 0
 
     for filling, ways in _hidden_fillings(pool, hidden):
+        if deadline is not None and perf_counter() >= deadline:
+            raise _WalkTooLong
         seats = [list(ranks) for ranks in known_ranks]
         left = dict(deck_ranks)
         for seat, picks in filling:
@@ -441,7 +496,7 @@ def _exact_over_hidden(known_ranks, hidden, pool, deck_ranks, needs, known_masks
         live = sorted({rank for ranks in seats for rank in ranks})
         avail = tuple(left.get(rank, 0) for rank in live)
         row = _exact(masks, tables, avail, tuple(1 << rank for rank in live),
-                     spare - sum(avail), needs, known_masks)
+                     spare - sum(avail), needs, known_masks, deadline=deadline)
         for k in range(6):
             for seat in range(n):
                 tally[k][seat] += ways * row[k][seat]
@@ -458,7 +513,8 @@ def _exact_cost(live, unknown, needs):
 
 
 def equity(hands, board=(), discards=None, dead=(), trials=DEFAULT_TRIALS,
-           seed=None, mode="auto", exact_budget=DEFAULT_EXACT_BUDGET):
+           seed=None, mode="auto", exact_budget=DEFAULT_EXACT_BUDGET,
+           seconds=None):
     """Compute equity for two or more HMRDS hands.
 
     ``hands`` holds what each player is still known to be holding and
@@ -477,6 +533,11 @@ def equity(hands, board=(), discards=None, dead=(), trials=DEFAULT_TRIALS,
     ``mode`` is ``"auto"`` (walk every runout when affordable, otherwise
     sample), ``"exact"`` to force the full walk, or ``"monte-carlo"`` to force
     sampling.  Unknown cards can only be sampled.
+
+    ``seconds`` caps how long sampling may run.  ``trials`` then acts as a
+    ceiling rather than a target, and the report says how many were actually
+    dealt and how wide the answer is.  It does not bound the exact walk, which
+    either is affordable or is not.
     """
     hands = [tuple(h) for h in hands]
     board = tuple(board)
@@ -545,29 +606,48 @@ def equity(hands, board=(), discards=None, dead=(), trials=DEFAULT_TRIALS,
         # answering as monte-carlo rather than refusing outright.
         mode = "monte-carlo"
 
-    if mode == "exact" and hidden:
-        deck_ranks = {}
-        for card in deck:
-            rank = card >> 2
-            deck_ranks[rank] = deck_ranks.get(rank, 0) + 1
-        known_ranks = [sorted(card >> 2 for card in cards) for cards in known]
-        pot, scoops, outs, keeps, highs, lows, total = _exact_over_hidden(
-            known_ranks, unknown, pool_ranks, deck_ranks, needs, known_masks)
-    elif mode == "exact":
-        masks, tables = build_profiles(known)
-        avail = tuple(sum(1 for c in deck if c >> 2 == rank) for rank in live)
-        bits = tuple(1 << rank for rank in live)
-        filler = len(deck) - sum(avail)
-        pot, scoops, outs, keeps, highs, lows = _exact(
-            masks, tables, avail, bits, filler, needs, known_masks)
-        total = 1.0
-    elif mode == "monte-carlo":
+    budget_ends = perf_counter() + seconds if seconds else None
+    pot2 = None
+
+    if mode == "exact":
+        # The walk only gets part of the budget, so an overrun still leaves
+        # enough clock to sample an answer instead of returning nothing.
+        walk_ends = perf_counter() + seconds * EXACT_WALK_SHARE if seconds else None
+        try:
+            if hidden:
+                deck_ranks = {}
+                for card in deck:
+                    rank = card >> 2
+                    deck_ranks[rank] = deck_ranks.get(rank, 0) + 1
+                known_ranks = [sorted(card >> 2 for card in cards) for cards in known]
+                pot, scoops, outs, keeps, highs, lows, total = _exact_over_hidden(
+                    known_ranks, unknown, pool_ranks, deck_ranks, needs, known_masks,
+                    deadline=walk_ends)
+            else:
+                masks, tables = build_profiles(known)
+                avail = tuple(sum(1 for c in deck if c >> 2 == rank) for rank in live)
+                bits = tuple(1 << rank for rank in live)
+                filler = len(deck) - sum(avail)
+                pot, scoops, outs, keeps, highs, lows = _exact(
+                    masks, tables, avail, bits, filler, needs, known_masks,
+                    deadline=walk_ends)
+                total = 1.0
+        except _WalkTooLong:
+            mode = "monte-carlo"
+
+    if mode == "monte-carlo":
         if trials < 1:
             raise ValueError("trials must be at least 1")
-        pot, scoops, outs, keeps, highs, lows = _monte_carlo(
-            known, unknown, deck, hole_pool, needs, known_masks, trials, seed)
-        total = float(trials)
-    else:
+        left = budget_ends - perf_counter() if budget_ends else None
+        if left is not None and left <= 0:
+            left = 0.01   # the walk overran; still answer with something
+        pot, scoops, outs, keeps, highs, lows, pot2, dealt = _monte_carlo(
+            known, unknown, deck, hole_pool, needs, known_masks, trials, seed,
+            seconds=left)
+        if not dealt:
+            raise ValueError("no trials were dealt; the time budget was too short")
+        total = float(dealt)
+    elif mode != "exact":
         raise ValueError("unknown mode %r" % mode)
 
     # With every community card out and every hand named there is a single
@@ -578,6 +658,16 @@ def equity(hands, board=(), discards=None, dead=(), trials=DEFAULT_TRIALS,
         boards = _cumulative(known_masks)
         detail = [describe(masks, tables, boards, seat, known[seat])
                   for seat in range(len(hands))]
+
+    # A sampled share is a mean, so its spread is the usual one: 1.96 standard
+    # errors either side, reported in points of equity. A walked answer has no
+    # spread at all.
+    margins = [0.0] * len(hands)
+    if mode == "monte-carlo" and total > 1:
+        for i in range(len(hands)):
+            mean = pot[i] / total
+            spread = max(pot2[i] / total - mean * mean, 0.0)
+            margins[i] = 196.0 * sqrt(spread / total)
 
     report = EquityReport(board=board, mode=mode, trials=total)
     for i in range(len(hands)):
@@ -591,6 +681,7 @@ def equity(hands, board=(), discards=None, dead=(), trials=DEFAULT_TRIALS,
             highs=highs[i],
             lows=lows[i],
             trials=total,
+            margin=margins[i],
             held=hands[i],
             discarded=discards[i],
             unknown=unknown[i],

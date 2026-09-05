@@ -17,10 +17,13 @@ from hmrds.cards import BOARD_SIZE, HAND_SIZE, cards_str, parse_cards
 from hmrds.equity import DEFAULT_TRIALS, MAX_PLAYERS, equity
 
 #: A ceiling rather than a budget: it stops a hand-written request asking for a
-#: run that never comes back. The page asks for the whole million only when a
-#: seat holds cards nobody has named, since the exact walk cannot deal those and
-#: sampling is all that is left -- about fifteen seconds' worth.
-MAX_TRIALS = 1_000_000
+#: run that never comes back. It is a ceiling rather than a target now: the page
+#: asks for a wall clock budget and the count is whatever fits inside it, so this
+#: only has to be higher than the fastest table can reach in `MAX_SECONDS`.
+MAX_TRIALS = 10_000_000
+
+#: The longest a caller may ask to be kept waiting.
+MAX_SECONDS = 60.0
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
@@ -43,6 +46,11 @@ class EquityRequest(BaseModel):
                     "pot -- a folded hand's. Not scored, but not dealt either.",
     )
     trials: int = Field(DEFAULT_TRIALS, ge=1, le=MAX_TRIALS)
+    seconds: float | None = Field(
+        None, gt=0, le=MAX_SECONDS,
+        description="Cap the sampling at this many seconds. Trials then act as a "
+                    "ceiling and the answer reports how many it managed.",
+    )
     mode: Literal["auto", "exact", "monte-carlo"] = Field(
         "auto", description="'auto' samples instead of walking when the runouts are too wide"
     )
@@ -58,6 +66,9 @@ class HandResponse(BaseModel):
     scoop: float
     out: float
     keep: float
+    #: Half-width of the 95% interval on `equity`, in points. Zero when every
+    #: runout was walked.
+    margin: float = 0.0
     detail: str = ""
 
 
@@ -93,7 +104,8 @@ def calculate(request: EquityRequest):
 
         started = perf_counter()
         report = equity(hands, board, discards=discards, dead=dead,
-                        trials=request.trials, mode=request.mode)
+                        trials=request.trials, mode=request.mode,
+                        seconds=request.seconds)
         elapsed = perf_counter() - started
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -114,6 +126,7 @@ def calculate(request: EquityRequest):
                 scoop=round(hand.scoop_pct, 2),
                 out=round(hand.out_pct, 2),
                 keep=round(hand.keep_pct, 2),
+                margin=round(hand.margin, 3),
                 detail=hand.detail,
             )
             for hand in report.hands

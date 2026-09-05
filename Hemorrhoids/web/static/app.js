@@ -18,12 +18,18 @@ const statusEl = document.getElementById("status");
 const clearBtn = document.getElementById("clear");
 const speedEl = document.getElementById("speed");
 
-// Fast walks every runout when that is cheap and samples 250,000 of them when
-// it is not, so a settled board still answers exactly and instantly; precise
-// always walks. Sampling lands within about 0.1% of the true number and takes
-// about a second, where an exact opening deal can take ten.
-const FAST_TRIALS = 250000;
-const PRECISE_TRIALS = 1000000;
+// Fast walks every runout when that is cheap and samples when it is not, so a
+// settled board still answers exactly and instantly; precise always asks for
+// the walk. What bounds the sampling is the clock, not a trial count: five
+// seconds for fast and thirty for precise. The count is whatever fits, and the
+// answer carries how wide it is, so a short budget reports itself as loose
+// rather than quietly returning a rougher number.
+const FAST_SECONDS = 5;
+const PRECISE_SECONDS = 30;
+
+// A ceiling the clock is expected to reach first; it only stops a table quick
+// enough to sample its way through the whole budget.
+const TRIAL_CEILING = 10000000;
 let speed = "fast";
 
 // Every slot on the table, in the order they are laid out. The order deck
@@ -452,8 +458,37 @@ let settling = 0;
 // finishes, and they all fight each other for the same core.
 function autoCalculate() {
   latest++;  // strand any answer still in flight for the old table
+  stopCountdown();
   clearTimeout(settling);
   settling = setTimeout(fire, 180);
+}
+
+function widestMargin(hands) {
+  return hands.reduce((worst, hand) => Math.max(worst, hand.margin || 0), 0);
+}
+
+/* ---------- the budget, counting down ---------- */
+
+let ticking = null;
+
+// The wait is bounded and the bound is known, so show it running out rather
+// than an ellipsis that says nothing about how long is left.
+function startCountdown(budget) {
+  stopCountdown();
+  const ends = performance.now() + budget * 1000;
+  const tick = () => {
+    const left = Math.max(0, (ends - performance.now()) / 1000);
+    setStatus("Calculating… " + left.toFixed(1) + "s");
+  };
+  tick();
+  ticking = setInterval(tick, 100);
+}
+
+function stopCountdown() {
+  if (ticking !== null) {
+    clearInterval(ticking);
+    ticking = null;
+  }
 }
 
 // Two ready hands is the trigger; anything short of that is a half dealt table,
@@ -472,13 +507,16 @@ function fire() {
 
 async function run(input) {
   const ticket = ++latest;
-  setStatus("Calculating…");
 
-  // Precise always asks for the walk. Cards nobody has named can be walked
-  // too -- one walk per way of filling them in, and suits collapse those to
-  // rank multisets -- but only while there are few enough of them, so the
-  // server is what decides and the answer says which it did.
+  // Precise asks for the walk, but the budget outranks it. A walk that is
+  // still going with the budget mostly spent is abandoned and the rest of the
+  // clock goes to sampling, so the wait is bounded either way. Cards nobody
+  // has named can be walked too -- one walk per way of filling them in -- but
+  // only while there are few enough of them. Either way the server decides and
+  // the answer says which it did.
   const precise = speed === "precise";
+  const budget = precise ? PRECISE_SECONDS : FAST_SECONDS;
+  startCountdown(budget);
   try {
     const response = await fetch("/hmrds/api/equity", {
       method: "POST",
@@ -489,22 +527,31 @@ async function run(input) {
         board: input.board.join(""),
         dead: input.dead.join(""),
         mode: precise ? "exact" : "auto",
-        trials: precise ? PRECISE_TRIALS : FAST_TRIALS,
+        trials: TRIAL_CEILING,
+        seconds: budget,
       }),
     });
     const payload = await response.json();
     if (ticket !== latest) return;
+    stopCountdown();
     if (!response.ok) throw new Error(payload.detail || "Calculation failed.");
 
     render(input.seats, payload.hands);
+    // A walked answer is the truth and carries no error; a sampled one is a
+    // mean, so it says how wide it is. The widest seat is the one quoted --
+    // it is the one the answer as a whole is only as good as.
     const how = payload.mode === "exact"
       ? "Exhaustive"
-      : Math.round(payload.trials).toLocaleString() + " simulations";
+      : Math.round(payload.trials).toLocaleString() + " simulations, ±" +
+        widestMargin(payload.hands).toFixed(2) + "%";
     // Say why Precise sampled, so the button does not look like it was ignored.
-    const why = precise && payload.mode !== "exact" ? "Too many unknowns, " : "";
+    // Either there were too many ways to deal the unknown or the walk would
+    // not have come back inside the budget; both read as too wide to walk.
+    const why = precise && payload.mode !== "exact" ? "Too wide to walk, " : "";
     setStatus(why + how + " in " + payload.seconds + " seconds");
   } catch (error) {
     if (ticket !== latest) return;
+    stopCountdown();
     clearResults();
     setStatus(error.message, true);
   }
