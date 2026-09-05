@@ -237,6 +237,11 @@ def main():
     misses = {}         # consecutive failed draws, per cell
     deadline = time.time() + args.hours * 3600 if args.hours else None
     begin = time.time()
+    # `begin` restarts at every checkpoint so machine time accumulates cleanly.
+    # Progress needs a clock that does not, or the rate reads as the whole run's
+    # matchups over one minute and comes out ten thousand a second.
+    session_begin = begin
+    session_base = chart.matchups
     last_checkpoint = last_progress = begin
 
     # A pool is only worth its overhead because a single exact walk is slow;
@@ -274,8 +279,8 @@ def main():
 
             now = time.time()
             if now - last_progress >= PROGRESS_SECONDS:
-                spent = now - begin
-                rate = chart.matchups / spent if spent else 0
+                spent = now - session_begin
+                rate = (chart.matchups - session_base) / spent if spent else 0
                 open_cells = sorted(chart.counts[r][c] for r, c in live
                                     if (r, c) not in exhausted)
                 middle = open_cells[len(open_cells) // 2] if open_cells else 0
