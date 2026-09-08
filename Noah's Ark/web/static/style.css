@@ -211,6 +211,12 @@ h2 { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08
 }
 /* The baseline is the quieter of the two: this game's own number leads. */
 .made-base { opacity: 0.62; }
+/* Equity is the headline of this panel, so it reads at full strength and the
+   categories sit under a rule below it. */
+.made-equity { color: var(--text); font-weight: 600; }
+.made-equity .made-base { font-weight: 600; }
+.made-row.made-equity { padding-bottom: 5px; margin-bottom: 4px;
+                        border-bottom: 1px solid var(--line); }
 .made-head { color: var(--muted); opacity: 0.75; letter-spacing: 0.04em; }
 .made-head > span { font-size: 9px; text-transform: uppercase; }
 

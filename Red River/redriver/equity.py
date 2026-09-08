@@ -381,15 +381,16 @@ def equity(hands, board=(), dead=(), trials=DEFAULT_TRIALS, seed=None,
 HOLDEM_BOARD = 5
 
 
-def holdem_made(hands, board=(), dead=(), trials=DEFAULT_TRIALS, seed=None,
+def holdem_baseline(hands, board=(), dead=(), trials=DEFAULT_TRIALS, seed=None,
                 mode="auto", exact_budget=DEFAULT_EXACT_BUDGET,
                 seconds=None):
-    """How often each hand ends in each category under ordinary Hold'em rules.
+    """Made-hand odds and equity under ordinary Hold'em rules, from one walk.
 
     Same hole cards and the same board so far, but the board stops at five
     community cards -- which is the board this deal would have had if it were
     Hold'em. Returns one list of fractions per hand, in :data:`BUCKET_NAMES`
-    order, so it reads directly against the variant's own numbers.
+    order, plus each hand's share of the pot, so both read directly against
+    the variant's own numbers. One walk answers both.
 
     Cards past the fifth are simply not dealt here rather than being held out
     of the deck. It makes no difference either way: a board with five or more
@@ -425,6 +426,7 @@ def holdem_made(hands, board=(), dead=(), trials=DEFAULT_TRIALS, seed=None,
     hole_accs = [CARD_KEY[a] + CARD_KEY[b] for a, b in hands]
     board_acc = sum(CARD_KEY[c] for c in board)
     made = [[0] * len(BUCKET_NAMES) for _ in seats]
+    pot = [0.0] * len(hands)
     total = 0
 
     for draw in draws:
@@ -432,11 +434,27 @@ def holdem_made(hands, board=(), dead=(), trials=DEFAULT_TRIALS, seed=None,
         for card in draw:
             acc += CARD_KEY[card]
         runout = board + tuple(draw)
+        best = -1
+        winners = []
         for i in seats:
             value = score_accumulator(hole_accs[i] + acc, hands[i], runout)
             made[i][bucket(value)] += 1
+            if value > best:
+                best = value
+                winners = [i]
+            elif value == best:
+                winners.append(i)
+        share = 1.0 / len(winners)
+        for i in winners:
+            pot[i] += share
         total += 1
 
     if not total:
-        return [[0.0] * len(BUCKET_NAMES) for _ in hands]
-    return [[count / total for count in row] for row in made]
+        return ([[0.0] * len(BUCKET_NAMES) for _ in hands], [0.0] * len(hands))
+    return ([[count / total for count in row] for row in made],
+            [p / total for p in pot])
+
+
+def holdem_made(*args, **kwargs):
+    """Just the made-hand odds from :func:`holdem_baseline`."""
+    return holdem_baseline(*args, **kwargs)[0]

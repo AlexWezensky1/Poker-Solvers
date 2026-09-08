@@ -329,12 +329,12 @@ function collect() {
 // as something, so each column sums to 100%. The second column is the same
 // deal read as ordinary Hold'em -- five community cards instead of this
 // game's -- which is what the extra cards here are worth.
-function madeOdds(made, baseline) {
+function madeOdds(made, baseline, equity, holdemEquity) {
   const box = document.createElement("details");
   box.className = "made";
 
   const head = document.createElement("summary");
-  head.textContent = "Hand at showdown";
+  head.textContent = "vs Hold’em";
   box.appendChild(head);
 
   const table = document.createElement("div");
@@ -349,6 +349,22 @@ function madeOdds(made, baseline) {
   there.textContent = "Hold’em";
   heading.append(blank, here, there);
   table.appendChild(heading);
+
+  // Equity first: it is the question the panel is really answering, and the
+  // categories underneath are how each side gets there.
+  if (holdemEquity !== null && holdemEquity !== undefined) {
+    const line = document.createElement("div");
+    line.className = "made-row made-equity";
+    const name = document.createElement("span");
+    name.textContent = "Equity";
+    const pct = document.createElement("span");
+    pct.textContent = equity.toFixed(2) + "%";
+    const base = document.createElement("span");
+    base.className = "made-base";
+    base.textContent = holdemEquity.toFixed(2) + "%";
+    line.append(name, pct, base);
+    table.appendChild(line);
+  }
 
   made.forEach((row, i) => {
     const other = baseline && baseline[i] ? baseline[i].pct : null;
@@ -420,7 +436,8 @@ function render(hands, results) {
     // What the hand turns into by the river, folded away because it is ten
     // rows and most of them are usually zero.
     if (result.made && result.made.length) {
-      player.result.appendChild(madeOdds(result.made, result.made_holdem));
+      player.result.appendChild(madeOdds(
+        result.made, result.made_holdem, result.equity, result.holdem_equity));
     }
 
     if (result.best_hand) {

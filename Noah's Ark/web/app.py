@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 
 from noahsark.cards import cards_str, parse_cards
 from noahsark.evaluator import BUCKET_NAMES
-from noahsark.equity import DEFAULT_TRIALS, MAX_PLAYERS, equity, holdem_made
+from noahsark.equity import DEFAULT_TRIALS, MAX_PLAYERS, equity, holdem_baseline
 
 #: A ceiling rather than a budget: it stops a hand-written request asking for a
 #: run that never comes back. Precise asks for the million when the walk is not
@@ -67,6 +67,9 @@ class HandResponse(BaseModel):
     #: Half-width of the 95% interval on `equity`, in points. Zero when every
     #: runout was walked.
     margin: float = 0.0
+    #: The same hand's share of the pot under ordinary Hold'em rules -- same
+    #: hole cards, same board so far, but stopping at five community cards.
+    holdem_equity: float = 0.0
     best_hand: str = ""
     made: list[CategoryOdds] = Field(
         default_factory=list,
@@ -111,10 +114,9 @@ def calculate(request: EquityRequest):
                         trials=request.trials, mode=request.mode,
                         seconds=request.seconds and request.seconds * MAIN_SHARE)
         # The same deal read as ordinary Hold'em, for the column beside it.
-        baseline = holdem_made(hands, board, dead=dead,
-                               trials=request.trials, mode=request.mode,
-                               seconds=request.seconds and
-                               request.seconds * (1 - MAIN_SHARE))
+        baseline, baseline_equity = holdem_baseline(
+            hands, board, dead=dead, trials=request.trials, mode=request.mode,
+            seconds=request.seconds and request.seconds * (1 - MAIN_SHARE))
         elapsed = perf_counter() - started
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -130,6 +132,7 @@ def calculate(request: EquityRequest):
                 hand=hand.label,
                 equity=round(hand.equity_pct, 2),
                 margin=round(hand.margin, 3),
+                holdem_equity=round(100.0 * baseline_equity[hand.index], 2),
                 win=round(hand.win_pct, 2),
                 tie=round(hand.tie_pct, 2),
                 made=[CategoryOdds(name=name, pct=round(pct, 2))
